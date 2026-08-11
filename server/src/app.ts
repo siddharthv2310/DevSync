@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import { notFound } from './common/handlers/notFound.js';
 import { errorHandler } from './common/handlers/errorHandelers.js';
 import { ApiErrors } from './common/errors/ApiErrors.js';
+import prisma from './config/prisma.js';
+import apiRoutes from "./Api/index.js";
 
 const app = express();
 
@@ -30,9 +32,13 @@ app.get("/" , (req,res)=>{
     })
 })
 
-app.get("/test" , (req,res)=>{
-    throw new ApiErrors(401 , "unathorised");
+app.get("/users" ,async (req,res)=>{
+    const users = await prisma.user.findMany();
+
+    res.json(users);
 })
+
+app.use("/api",apiRoutes);
 
 app.use(notFound);
 
