@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { generateOtp,hashOtp,getOtpExpiry } from "../../utils/OTP.js";
 import { sendLoginOtpEmail } from "../../utils/email.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
+import { generateAccessToken, generateRefreshTokens } from "../../utils/jwt.js";
 
 export const createLoginOtp = async(userId:string) =>{
     const otp = generateOtp();
@@ -54,7 +55,7 @@ export const loginUser = async(email:string , password:string) =>{
 
 export const verifyLoginOtp = async (email:string , otp:string ,)=>{
 
-    const user = prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
         where:{
             email,
         }
@@ -64,10 +65,62 @@ export const verifyLoginOtp = async (email:string , otp:string ,)=>{
         throw new ApiErrors(401,"invalid otp");
     }
 
-    const loginOtp = prisma.loginOtp.findFirst({
+    const loginOtp =await prisma.loginOtp.findFirst({
         where:{
             userId : user.id,
         }
     });
+
+    if(!loginOtp){
+        throw new ApiErrors(401,"Otp not found or already used");
+    }
+
+    if(loginOtp.expiredAt < new Date()){
+        await prisma.loginOtp.delete({
+            where:{
+                id :loginOtp.id,
+            }
+        });
+
+        throw new ApiErrors(401,"OTP has expired");
+    }
+    if(loginOtp.attempts >= 5){
+        await prisma.loginOtp.delete({
+            where:{
+                id:loginOtp.id,
+            }
+        });
+        throw new ApiErrors(429,"Too many attempts");
+    }
+
+    const OtpHash = hashOtp(otp);
+
+    if(loginOtp.otpHash != OtpHash ){
+        await prisma.loginOtp.update({
+            where :{
+                id : loginOtp.id,
+            },
+            data :{
+                attempts:{
+                    increment:1,
+                },
+            },
+
+        });
+
+        throw new ApiErrors(400,"Invalid OTP");
+    }
+
+    await prisma.loginOtp.delete({
+        where:{
+            id : loginOtp.id,
+        },
+    });
+
+    const accessToken = generateAccessToken(user.id);
+    const refreshToken = generateRefreshTokens(user.id);
+
+    return {user,accessToken,refreshToken};
+
 }
 
