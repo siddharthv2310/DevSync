@@ -17,7 +17,7 @@ model LoginOtp{
   userId   String
   otpHash  String
   expiredAt DateTime
-  attempts  Int
+  attempts  Int @default(0)
   createdAt DateTime @default(now())
 
   user User @relation(fields : [userId] , references : [id], onDelete : Cascade)

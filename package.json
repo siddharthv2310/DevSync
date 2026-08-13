@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/siddharthv2310/DevSync/issues"
   },
-  "homepage": "https://github.com/siddharthv2310/DevSync#readme"
+  "homepage": "https://github.com/siddharthv2310/DevSync#readme",
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
 }

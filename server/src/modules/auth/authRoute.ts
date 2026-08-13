@@ -1,8 +1,9 @@
 import { Router } from "express";
-import  {healthCheck} from "./authController.js";
+import  {login} from "./authController.js";
 
 const router = Router();
 
-router.get("/health", healthCheck);
+// router.get("/health", healthCheck);
+router.post("/login",login);
 
 export default router;
