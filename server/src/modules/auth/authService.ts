@@ -1,5 +1,6 @@
 import prisma from "../../config/prisma.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { generateOtp,hashOtp,getOtpExpiry } from "../../utils/OTP.js";
 import { sendLoginOtpEmail } from "../../utils/email.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
@@ -117,10 +118,111 @@ export const verifyLoginOtp = async (email:string , otp:string ,)=>{
         },
     });
 
+    await prisma.user.update({
+        where:{
+            id : user.id,
+        },
+        data:{
+            isEmailVerified:true,
+        },
+    });
+
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshTokens(user.id);
+
+    const refreshTokenHash = await bcrypt.hash(refreshToken,10);
+
+    await prisma.user.update({
+        where:{
+            id : user.id,
+        },
+        data:{
+            refreshToken : refreshTokenHash,
+        },
+    });
+
 
     return {user,accessToken,refreshToken};
 
 }
+
+export const getCurrentUser = async (userId: string) => {
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        avatar: true,
+        provider: true,
+        isEmailVerified: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+  
+    if (!user) {
+      throw new ApiErrors(404, "User not found");
+    }
+  
+    return user;
+  };
+
+  interface refreshTokenPayload{
+    userId:string;
+  }
+
+  export const refreshAccessToken = async(refreshToken : string)=>{
+
+    let decoded : refreshTokenPayload;
+
+    try{
+        decoded = jwt.verify(refreshToken , process.env.JWT_REFRESH_SECRET!) as refreshTokenPayload;
+    }
+    catch(error){
+        throw new ApiErrors (401,"Invalid or expired refresh token");
+    }
+
+    const user = await prisma.user.findUnique({
+        where:{
+            id: decoded.userId,
+        }
+    })
+
+    if(!user){
+        throw new ApiErrors(404,"User not found");
+    }
+
+    if(!user.refreshToken){
+        throw new ApiErrors(401, "Please login again");
+    }
+
+    const isMatch = await bcrypt.compare(refreshToken,user.refreshToken);
+
+    if(!isMatch){
+        throw new ApiErrors(401,"Invalid refresh token");
+    }
+
+    const accessToken = generateAccessToken(user.id);
+    
+    return {accessToken};
+  }
+
+  export const logoutUser = async(userId:string)=>{
+    try{
+        await prisma.user.update({
+            where:{
+                id : userId,
+            },
+            data:{
+                refreshToken:null,
+            },
+        });
+    }
+    catch(error){
+        throw  new ApiErrors(400,"user not found");
+    }
+  }
 

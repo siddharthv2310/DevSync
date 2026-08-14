@@ -1,6 +1,6 @@
-import {Request ,Response } from "express"
-import { loginSchema, verifyLoginOtpSchema } from "./authValidation.js";
-import { loginUser } from "./authService.js";
+import {Request ,Response,NextFunction } from "express"
+import { loginSchema, refreshTokenSchema, verifyLoginOtpSchema } from "./authValidation.js";
+import { getCurrentUser, loginUser, logoutUser, refreshAccessToken } from "./authService.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { verifyLoginOtp } from "./authService.js";
 
@@ -83,12 +83,63 @@ export const completeVerifyLoginOtp = async (req : Request, res : Response) => {
     }
 }
 
-export const getCurrentUser = async(req:Request , res:Response) =>{
-    return res.status(200).json({
-        success:true,
-        message:"Authenticated",
-        data:{
-            user : req.user?.userId,
-        },
-    });
-}
+export const getCurrentUserController = async (req: Request,res: Response,next: NextFunction) => {
+    try {
+      const user = await getCurrentUser(req.user!.userId);
+  
+      return res.status(200).json({
+        success: true,
+        message: "Authenticated",
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  export const refresh = async(req:Request , res:Response , next:NextFunction)=>{
+    const result = refreshTokenSchema.safeParse(req.body);
+
+    if(!result.success){
+        return res.status(400).json({
+            success:false,
+            message : "Invalid request",
+            error : result.error.flatten(),
+        });
+    }
+
+    try{
+        const {refreshToken} =  result.data;
+        const accessToken = await refreshAccessToken(refreshToken);
+
+        return res.status(200).json({
+            success:true,
+            message:"Access Token refreshed",
+            data:accessToken,
+        });
+    }
+    catch(error){
+        if(error instanceof ApiErrors)
+        return res.status(401).json({
+            success:false,
+            message :error.message 
+        });
+
+        next(error);
+    }
+
+  }
+
+  export const logout = async(req:Request , res:Response , next:NextFunction)=>{
+    try{
+        await logoutUser(req.user!.userId);
+
+        res.status(200).json({
+            success:true,
+            message:"user logged Out successfully",
+        })
+    }
+    catch(error){
+        next(error);
+    }
+  }

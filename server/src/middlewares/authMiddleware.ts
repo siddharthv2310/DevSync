@@ -38,6 +38,9 @@ interface JwtPayload {
 
     }
     catch(error){
+        if(error instanceof ApiErrors){
+            return next(error);
+        }
         next(new ApiErrors(401, "Invalid or expired access token"));
     }
   }

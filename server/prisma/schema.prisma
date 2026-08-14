@@ -12,6 +12,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model PasswordResetOtp{
+  id       String @id @default(uuid())
+  userId   String
+  otpHash  String
+  expiredAt DateTime
+  createdAt DateTime @default(now())
+  attempts  Int @default(0)
+
+  user User @relation(fields : [userId] , references : [id] , onDelete:Cascade)
+
+  @@index([userId])
+}
+
 model LoginOtp{
   id       String  @id @default(uuid())
   userId   String
@@ -33,15 +46,18 @@ model User {
   email     String   @unique
   password  String?
 
-  Avatar    String?
+  avatar    String?
 
   provider  AuthProvider @default(LOCAL)
   providerId String?
+
+  refreshToken String?
 
   isEmailVerified Boolean @default(false)
   isActive  Boolean @default(false)
 
   loginOtps LoginOtp[]
+  passwordResetOtps PasswordResetOtp[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
