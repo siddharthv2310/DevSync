@@ -226,3 +226,39 @@ export const getCurrentUser = async (userId: string) => {
     }
   }
 
+  export const forgetPassword =async(email:string )=>{
+
+    const user = await prisma.user.findUnique({
+        where:{
+            email:email,
+        },
+    });
+
+    if(!user){
+        throw new Error("User have no account! Sign in first");
+    }
+
+    await prisma.passwordResetOtp.deleteMany({
+        where:{
+            userId:user.id,
+        }
+    })
+
+    const otp:string  = generateOtp();
+    const hashedOtp:string = hashOtp(otp);
+    const expiresAt = getOtpExpiry();
+
+    await prisma.passwordResetOtp.create({
+        data:{
+            userId : user.id,
+            otpHash:hashedOtp,
+            expiredAt:expiresAt,
+        },
+    });
+
+    await sendLoginOtpEmail(process.env.TO_EMAIL! , otp );
+
+  }
+
+  
+

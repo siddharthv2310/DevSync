@@ -1,6 +1,6 @@
 import {Request ,Response,NextFunction } from "express"
-import { loginSchema, refreshTokenSchema, verifyLoginOtpSchema } from "./authValidation.js";
-import { getCurrentUser, loginUser, logoutUser, refreshAccessToken } from "./authService.js";
+import { forgetPasswordSchema, loginSchema, refreshTokenSchema, verifyLoginOtpSchema } from "./authValidation.js";
+import { forgetPassword, getCurrentUser, loginUser, logoutUser, refreshAccessToken } from "./authService.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { verifyLoginOtp } from "./authService.js";
 
@@ -40,7 +40,7 @@ export const login = async (req:Request ,res:Response )=>{
             message : error instanceof Error ? error.message : "Invalid email or password",
         });
     }
-}
+};
 
 export const completeVerifyLoginOtp = async (req : Request, res : Response) => {
     const {data,error} = verifyLoginOtpSchema.safeParse(req.body);
@@ -81,7 +81,7 @@ export const completeVerifyLoginOtp = async (req : Request, res : Response) => {
             message:error instanceof Error ? error.message : "Something went wrong",
         });
     }
-}
+};
 
 export const getCurrentUserController = async (req: Request,res: Response,next: NextFunction) => {
     try {
@@ -128,7 +128,7 @@ export const getCurrentUserController = async (req: Request,res: Response,next: 
         next(error);
     }
 
-  }
+  };
 
   export const logout = async(req:Request , res:Response , next:NextFunction)=>{
     try{
@@ -142,4 +142,30 @@ export const getCurrentUserController = async (req: Request,res: Response,next: 
     catch(error){
         next(error);
     }
-  }
+  };
+
+  export const forgetPasswordController= async(req:Request,res:Response , next:NextFunction)=>{
+    const result = forgetPasswordSchema.safeParse(req.body);
+
+    if(!result.success){
+        return res.status(400).json({
+            success:true,
+            message:"enter valid email",
+            error:result.error.flatten(),
+        });
+    }
+    try{
+        await forgetPassword(result.data.email);
+
+        return res.status(200).json({
+            sucess:true,
+            message:"otp send successfully",
+        })
+    }
+    catch(error){
+        next(error);
+    }
+
+  };
+
+  
