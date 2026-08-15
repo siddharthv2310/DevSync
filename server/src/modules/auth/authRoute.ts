@@ -1,6 +1,8 @@
 import { Router } from "express";
-import  {completeVerifyLoginOtp,forgetPasswordController,getCurrentUserController, login, logout, refresh} from "./authController.js";
+import  {completeVerifyLoginOtp,forgetPasswordController,getCurrentUserController, login, logout, refresh, setNewPasswordController, verifyResetOtpController} from "./authController.js";
 import { authMiddleware } from "../../middlewares/authMiddleware.js";
+import { resetPasswordMiddleware } from "../../middlewares/resetPasswordMiddleware.js";
+
 
 const router = Router();
 
@@ -11,6 +13,7 @@ router.get("/me",authMiddleware , getCurrentUserController);
 router.post("/refresh",refresh);
 router.post("/logout",authMiddleware,logout);
 router.post("/forget-password",forgetPasswordController);
-
+router.post("/verify-reset-otp", verifyResetOtpController);
+router.post("/reset-new-password",resetPasswordMiddleware, setNewPasswordController);
 
 export default router;

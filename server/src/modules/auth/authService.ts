@@ -1,24 +1,24 @@
 import prisma from "../../config/prisma.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { generateOtp,hashOtp,getOtpExpiry } from "../../utils/OTP.js";
+import { generateOtp, hashOtp, getOtpExpiry } from "../../utils/OTP.js";
 import { sendLoginOtpEmail } from "../../utils/email.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
-import { generateAccessToken, generateRefreshTokens } from "../../utils/jwt.js";
+import { generateAccessToken, generateRefreshTokens, generateResetPasswordToken } from "../../utils/jwt.js";
 
-export const createLoginOtp = async(userId:string) =>{
+export const createLoginOtp = async (userId: string) => {
     const otp = generateOtp();
     const otpHash = hashOtp(otp);
     const expiredAt = getOtpExpiry();
 
     await prisma.loginOtp.deleteMany({
-        where:{
+        where: {
             userId,
         },
     })
 
     await prisma.loginOtp.create({
-        data :{
+        data: {
             userId,
             otpHash,
             expiredAt,
@@ -27,20 +27,20 @@ export const createLoginOtp = async(userId:string) =>{
     return otp;
 };
 
-export const loginUser = async(email:string , password:string) =>{
+export const loginUser = async (email: string, password: string) => {
     const user = await prisma.user.findUnique({
-        where:{
+        where: {
             email,
         },
     });
 
-    if(!user || !user.password){
+    if (!user || !user.password) {
         throw new Error("invalid email or password");
     }
 
-    const isValidPassword = bcrypt.compare(password,user.password);
+    const isValidPassword = bcrypt.compare(password, user.password);
 
-    if(!isValidPassword){
+    if (!isValidPassword) {
         throw new Error("invalid email or password");
     }
 
@@ -49,216 +49,298 @@ export const loginUser = async(email:string , password:string) =>{
     // here we could not send email to other and we could only send email to my email.
     //  for sending email to others mail i need to have a domian that i could attach to resend to send the email
 
-    await sendLoginOtpEmail(process.env.TO_EMAIL! , otp);
+    await sendLoginOtpEmail(process.env.TO_EMAIL!, otp);
 
-    return {user , otp};
+    return { user, otp };
 };
 
-export const verifyLoginOtp = async (email:string , otp:string ,)=>{
+export const verifyLoginOtp = async (email: string, otp: string,) => {
 
     const user = await prisma.user.findUnique({
-        where:{
+        where: {
             email,
         }
     });
 
-    if(!user){
-        throw new ApiErrors(401,"invalid otp");
+    if (!user) {
+        throw new ApiErrors(401, "invalid otp");
     }
 
-    const loginOtp =await prisma.loginOtp.findFirst({
-        where:{
-            userId : user.id,
+    const loginOtp = await prisma.loginOtp.findFirst({
+        where: {
+            userId: user.id,
         }
     });
 
-    if(!loginOtp){
-        throw new ApiErrors(401,"Otp not found or already used");
+    if (!loginOtp) {
+        throw new ApiErrors(401, "Otp not found or already used");
     }
 
-    if(loginOtp.expiredAt < new Date()){
+    if (loginOtp.expiredAt < new Date()) {
         await prisma.loginOtp.delete({
-            where:{
-                id :loginOtp.id,
+            where: {
+                id: loginOtp.id,
             }
         });
 
-        throw new ApiErrors(401,"OTP has expired");
+        throw new ApiErrors(401, "OTP has expired");
     }
-    if(loginOtp.attempts >= 5){
+    if (loginOtp.attempts >= 5) {
         await prisma.loginOtp.delete({
-            where:{
-                id:loginOtp.id,
+            where: {
+                id: loginOtp.id,
             }
         });
-        throw new ApiErrors(429,"Too many attempts");
+        throw new ApiErrors(429, "Too many attempts");
     }
 
     const OtpHash = hashOtp(otp);
 
-    if(loginOtp.otpHash != OtpHash ){
+    if (loginOtp.otpHash != OtpHash) {
         await prisma.loginOtp.update({
-            where :{
-                id : loginOtp.id,
+            where: {
+                id: loginOtp.id,
             },
-            data :{
-                attempts:{
-                    increment:1,
+            data: {
+                attempts: {
+                    increment: 1,
                 },
             },
 
         });
 
-        throw new ApiErrors(400,"Invalid OTP");
+        throw new ApiErrors(400, "Invalid OTP");
     }
 
     await prisma.loginOtp.delete({
-        where:{
-            id : loginOtp.id,
+        where: {
+            id: loginOtp.id,
         },
     });
 
     await prisma.user.update({
-        where:{
-            id : user.id,
+        where: {
+            id: user.id,
         },
-        data:{
-            isEmailVerified:true,
+        data: {
+            isEmailVerified: true,
         },
     });
 
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshTokens(user.id);
 
-    const refreshTokenHash = await bcrypt.hash(refreshToken,10);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
 
     await prisma.user.update({
-        where:{
-            id : user.id,
+        where: {
+            id: user.id,
         },
-        data:{
-            refreshToken : refreshTokenHash,
+        data: {
+            refreshToken: refreshTokenHash,
         },
     });
 
 
-    return {user,accessToken,refreshToken};
+    return { user, accessToken, refreshToken };
 
 }
 
 export const getCurrentUser = async (userId: string) => {
-    
+
     const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        email: true,
-        avatar: true,
-        provider: true,
-        isEmailVerified: true,
-        isActive: true,
-        createdAt: true,
-      },
+        where: { id: userId },
+        select: {
+            id: true,
+            name: true,
+            username: true,
+            email: true,
+            avatar: true,
+            provider: true,
+            isEmailVerified: true,
+            isActive: true,
+            createdAt: true,
+        },
     });
-  
+
     if (!user) {
-      throw new ApiErrors(404, "User not found");
+        throw new ApiErrors(404, "User not found");
     }
-  
+
     return user;
-  };
+};
 
-  interface refreshTokenPayload{
-    userId:string;
-  }
+interface refreshTokenPayload {
+    userId: string;
+}
 
-  export const refreshAccessToken = async(refreshToken : string)=>{
+export const refreshAccessToken = async (refreshToken: string) => {
 
-    let decoded : refreshTokenPayload;
+    let decoded: refreshTokenPayload;
 
-    try{
-        decoded = jwt.verify(refreshToken , process.env.JWT_REFRESH_SECRET!) as refreshTokenPayload;
+    try {
+        decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as refreshTokenPayload;
     }
-    catch(error){
-        throw new ApiErrors (401,"Invalid or expired refresh token");
+    catch (error) {
+        throw new ApiErrors(401, "Invalid or expired refresh token");
     }
 
     const user = await prisma.user.findUnique({
-        where:{
+        where: {
             id: decoded.userId,
         }
     })
 
-    if(!user){
-        throw new ApiErrors(404,"User not found");
+    if (!user) {
+        throw new ApiErrors(404, "User not found");
     }
 
-    if(!user.refreshToken){
+    if (!user.refreshToken) {
         throw new ApiErrors(401, "Please login again");
     }
 
-    const isMatch = await bcrypt.compare(refreshToken,user.refreshToken);
+    const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
 
-    if(!isMatch){
-        throw new ApiErrors(401,"Invalid refresh token");
+    if (!isMatch) {
+        throw new ApiErrors(401, "Invalid refresh token");
     }
 
     const accessToken = generateAccessToken(user.id);
-    
-    return {accessToken};
-  }
 
-  export const logoutUser = async(userId:string)=>{
-    try{
+    return { accessToken };
+}
+
+export const logoutUser = async (userId: string) => {
+    try {
         await prisma.user.update({
-            where:{
-                id : userId,
+            where: {
+                id: userId,
             },
-            data:{
-                refreshToken:null,
+            data: {
+                refreshToken: null,
             },
         });
     }
-    catch(error){
-        throw  new ApiErrors(400,"user not found");
+    catch (error) {
+        throw new ApiErrors(400, "user not found");
     }
-  }
+}
 
-  export const forgetPassword =async(email:string )=>{
+export const forgetPassword = async (email: string) => {
 
     const user = await prisma.user.findUnique({
-        where:{
-            email:email,
+        where: {
+            email: email,
         },
     });
 
-    if(!user){
+    if (!user) {
         throw new Error("User have no account! Sign in first");
     }
 
     await prisma.passwordResetOtp.deleteMany({
-        where:{
-            userId:user.id,
+        where: {
+            userId: user.id,
         }
     })
 
-    const otp:string  = generateOtp();
-    const hashedOtp:string = hashOtp(otp);
+    const otp: string = generateOtp();
+    const hashedOtp: string = hashOtp(otp);
     const expiresAt = getOtpExpiry();
 
     await prisma.passwordResetOtp.create({
-        data:{
-            userId : user.id,
-            otpHash:hashedOtp,
-            expiredAt:expiresAt,
+        data: {
+            userId: user.id,
+            otpHash: hashedOtp,
+            expiredAt: expiresAt,
         },
     });
 
-    await sendLoginOtpEmail(process.env.TO_EMAIL! , otp );
+    await sendLoginOtpEmail(process.env.TO_EMAIL!, otp);
 
-  }
+};
 
-  
+export const verifyResetOtp = async (email: string, otp: string) => {
+    const user = await prisma.user.findUnique({
+        where: {
+            email,
+        },
+    });
+
+    if (!user) {
+        throw new ApiErrors(400, "Invalid OTP or email");
+    }
+
+    const resetOtp = await prisma.passwordResetOtp.findFirst({
+        where: {
+            userId: user.id,
+        },
+    });
+
+    if (!resetOtp) {
+        throw new ApiErrors(400, "OTP not found or already used");
+    }
+
+    if (resetOtp.expiredAt < new Date()) {
+        await prisma.passwordResetOtp.delete({
+            where: {
+                id: resetOtp.id,
+            },
+        });
+
+        throw new ApiErrors(400, "OTP has expired");
+    }
+
+    if (resetOtp.attempts >= 5) {
+        await prisma.passwordResetOtp.delete({
+            where: {
+                id: resetOtp.id,
+            },
+        });
+
+        throw new ApiErrors(429, "to many OTP attempts");
+    }
+
+    const hashedOtp = hashOtp(otp);
+
+    if (resetOtp.otpHash != hashedOtp) {
+        await prisma.passwordResetOtp.update({
+            where: { id: resetOtp.id },
+            data: {
+                attempts: resetOtp.attempts + 1,
+            },
+        });
+
+        throw new ApiErrors(400, "Invalid OTP");
+    }
+
+    await prisma.passwordResetOtp.delete({
+        where: {
+            id: resetOtp.id,
+        },
+    });
+
+    const resetToken = generateResetPasswordToken(user.id);
+
+    return { resetToken };
+
+}
+
+
+export const resetPassword = async (userId: string, newPassword: string) => {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+        where: {
+            id: userId,
+        },
+        data: {
+            password: hashedPassword,
+            refreshToken: null,
+        },
+    });
+}
+
+
+
 
