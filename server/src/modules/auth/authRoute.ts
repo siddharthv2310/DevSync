@@ -1,5 +1,5 @@
 import { Router } from "express";
-import  {completeVerifyLoginOtp,forgetPasswordController,getCurrentUserController, googleOAuthController, login, logout, refresh, setNewPasswordController, verifyResetOtpController} from "./authController.js";
+import  {completeVerifyLoginOtp,forgetPasswordController,getCurrentUserController, githubCallbackController, githubRedirectController, googleOAuthController, login, logout, refresh, setNewPasswordController, verifyResetOtpController} from "./authController.js";
 import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { resetPasswordMiddleware } from "../../middlewares/resetPasswordMiddleware.js";
 
@@ -16,5 +16,7 @@ router.post("/forget-password",forgetPasswordController);
 router.post("/verify-reset-otp", verifyResetOtpController);
 router.post("/reset-new-password",resetPasswordMiddleware, setNewPasswordController);
 router.post("/oauth/google",googleOAuthController);
+router.get("/oauth/github", githubRedirectController);
+router.post("/oauth/github/callback", githubCallbackController);
 
 export default router;

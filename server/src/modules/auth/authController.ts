@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from "express"
-import { forgetPasswordSchema, googleAuthSchema, loginSchema, refreshTokenSchema, setNewPasswordSchema, verifyLoginOtpSchema, verifyResetOtpSchema } from "./authValidation.js";
+import { forgetPasswordSchema, githubCallbackSchema, googleAuthSchema, loginSchema, setNewPasswordSchema, verifyLoginOtpSchema, verifyResetOtpSchema } from "./authValidation.js";
 import { forgetPassword, getCurrentUser, loginUser, loginWithOAuth, logoutUser, refreshAccessToken, resetPassword, verifyResetOtp } from "./authService.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { verifyLoginOtp } from "./authService.js";
 import { verifyGoogleToken } from "../../providers/googleProvider.js";
 import { OAuthProfile } from "../../providers/authType.js";
+import { verifyGithubCode } from "../../providers/githubProvider.js";
+import crypto from "crypto";
 
 // export const healthCheck = (req:Request , res:Response)=>{
 //     res.status(200).json({success:true , message : "auth modeule working fine"});
@@ -60,6 +62,21 @@ export const completeVerifyLoginOtp = async (req: Request, res: Response) => {
 
         const { user, accessToken, refreshToken } = await verifyLoginOtp(email, otp);
 
+        res.cookie("accessToken", accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 15 * 60 * 1000,
+        });
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+
         return res.status(200).json({
             status: true,
             message: "OTP verifyied successfully",
@@ -69,8 +86,6 @@ export const completeVerifyLoginOtp = async (req: Request, res: Response) => {
                     userName: user.name,
                     userEmail: user.email,
                 },
-                accessToken,
-                refreshToken,
             }
         })
 
@@ -100,24 +115,29 @@ export const getCurrentUserController = async (req: Request, res: Response, next
 };
 
 export const refresh = async (req: Request, res: Response, next: NextFunction) => {
-    const result = refreshTokenSchema.safeParse(req.body);
+    const refreshToken = req.cookies.refreshToken;
 
-    if (!result.success) {
-        return res.status(400).json({
+    if (!refreshToken) {
+        return res.status(401).json({
             success: false,
-            message: "Invalid request",
-            error: result.error.flatten(),
+            message: "Refresh token missing",
         });
     }
 
     try {
-        const { refreshToken } = result.data;
+
         const accessToken = await refreshAccessToken(refreshToken);
+
+        res.cookie("accessToken", accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 15 * 60 * 1000,
+        });
 
         return res.status(200).json({
             success: true,
             message: "Access Token refreshed",
-            data: accessToken,
         });
     }
     catch (error) {
@@ -135,6 +155,15 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
         await logoutUser(req.user!.userId);
+
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax" as const,
+        };
+
+        res.clearCookie("accessToken", cookieOptions);
+        res.clearCookie("refreshToken", cookieOptions);
 
         res.status(200).json({
             success: true,
@@ -199,7 +228,7 @@ export const verifyResetOtpController = async (req: Request, res: Response, next
     }
 };
 
-export const setNewPasswordController = async ( req: Request, res: Response, next: NextFunction) => {
+export const setNewPasswordController = async (req: Request, res: Response, next: NextFunction) => {
     const result = setNewPasswordSchema.safeParse(req.body);
 
     if (!result.success) {
@@ -226,35 +255,125 @@ export const setNewPasswordController = async ( req: Request, res: Response, nex
     }
 };
 
-export const googleOAuthController = async(req:Request,res:Response , next:NextFunction)=>{
-    const result =  googleAuthSchema.safeParse(req.body);
+export const googleOAuthController = async (req: Request, res: Response, next: NextFunction) => {
+    const result = googleAuthSchema.safeParse(req.body);
 
-    if(!result.success){
+    if (!result.success) {
         return res.status(400).json({
-            success:false,
-            message:"InvallidRequest",
-            error:result.error.flatten(),
+            success: false,
+            message: "InvallidRequest",
+            error: result.error.flatten(),
         });
     }
 
-    try{
-        const profile : OAuthProfile = await verifyGoogleToken(result.data.idToken);
+    try {
+        const profile: OAuthProfile = await verifyGoogleToken(result.data.idToken);
 
-        const {user , accessToken , refreshToken} = await  loginWithOAuth(profile);
+        const { user, accessToken, refreshToken } = await loginWithOAuth(profile);
+
+        res.cookie("accessToken", accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 15 * 60 * 1000,
+        });
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
 
         return res.status(200).json({
-            success:true,
-            message:"Google login successful",
-            data:{
+            success: true,
+            message: "Google login successful",
+            data: {
                 user,
-                accessToken,
-                refreshToken,
             }
         })
 
     }
-    catch(error){
+    catch (error) {
         next(error);
     }
 }
 
+export const githubRedirectController = (req: Request, res: Response) => {
+
+    const state = crypto.randomBytes(32).toString("hex");
+
+    res.cookie("github_oauth_state", state, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 10 * 60 * 1000, // 10 minutes
+    });
+
+    const githubUrl =
+        "https://github.com/login/oauth/authorize?" +
+        new URLSearchParams({
+            client_id: process.env.GITHUB_CLIENT_ID!,
+            redirect_uri:
+                `${process.env.BACKEND_URL}/api/v1/auth/oauth/github/callback`,
+            scope: "read:user user:email",
+            state,
+        }).toString();
+
+    return res.redirect(githubUrl);
+};
+
+export const githubCallbackController = async (req: Request, res: Response, next: NextFunction) => {
+    const result = githubCallbackSchema.safeParse(req.query);
+
+    if (!result.success) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid GitHub callback",
+            errors: result.error.flatten(),
+        });
+    }
+
+
+    try {
+        const { code, state } = result.data;
+
+        const storedState = req.cookies.github_oauth_state;
+
+        res.clearCookie("github_oauth_state", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+        });
+        
+        if (!storedState || storedState !== state) {
+            throw new ApiErrors(401, "Invalid OAuth state");
+        }
+
+        const profile = await verifyGithubCode(code);
+
+        const data = await loginWithOAuth(profile);
+
+        // Store Refresh Token
+        res.cookie("refreshToken", data.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        // Store Access Token
+        res.cookie("accessToken", data.accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 15 * 60 * 1000,
+        });
+
+
+        return res.redirect(`${process.env.FRONTEND_URL}/auth/success`);
+
+    } catch (error) {
+        next(error);
+    }
+};

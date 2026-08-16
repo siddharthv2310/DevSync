@@ -1,59 +1,29 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-    email: z
-      .string()
-      .trim()
-      .email("Please provide a valid email address"),
-  
-    password: z
-      .string()
-      .min(1, "Password is required"),
-  });
+  email: z.string().trim().email("Please provide a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
 
+export const verifyLoginOtpSchema = z.object({
+  email: z.string().trim().email("Please provide a valid email address"),
+  otp: z.string().regex(/^\d{6}$/, "OTP must be a 6-digit number"),
+});
 
-  export const verifyLoginOtpSchema = z.object({
-    email: z
-    .string()
-    .trim()
-    .email("please provide valid email"),
+export const forgetPasswordSchema = z.object({
+  email: z.string().trim().email("Please provide a valid email address"),
+});
 
-    otp: z
-    .string()
-    .regex(/^\d{6}$/,"otp must be 6 digit number"),
-  });
+export const verifyResetOtpSchema = z.object({
+  email: z.string().trim().email("Please provide a valid email address"),
+  otp: z.string().regex(/^\d{6}$/, "OTP must be a 6-digit number"),
+});
 
-  export const refreshTokenSchema = z.object({
-    refreshToken: z
-    .string()
-    .min(1,"refresh token is required")
-  });
-
-  export const forgetPasswordSchema = z.object({
-    email : z
-    .string()
-    .trim()
-    .email("please provide valid email"),
-  });
-
-
-  export const verifyResetOtpSchema = z.object({
-    email:z
-    .string()
-    .trim()
-    .email("enter valid email"),
-
-    otp:z
-    .string()
-    .regex(/^\d{6}$/,"OTP must be of6 digit"),
-  });
-
-  export const setNewPasswordSchema = z
+export const setNewPasswordSchema = z
   .object({
     newPassword: z
       .string()
       .min(8, "Password must be at least 8 characters long"),
-
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -61,14 +31,20 @@ export const loginSchema = z.object({
     path: ["confirmPassword"],
   });
 
-  export const googleAuthSchema = z.object({
-    idToken:z.string().min(1,"Google Id token required"),
-  })
+export const googleAuthSchema = z.object({
+  idToken: z.string().min(1, "Google ID token is required"),
+});
 
-  export type googleAuthinput =z.infer <typeof googleAuthSchema>;
-  export type SetNewPasswordInput = z.infer<typeof setNewPasswordSchema>;
-  export type VerifyResetOtpInput = z.infer<typeof verifyResetOtpSchema>;
-  export type forgetPasswordInput = z.infer<typeof forgetPasswordSchema>;
-  export type refreshTokenInput = z.infer<typeof refreshTokenSchema>;
-  export type VerifyLoginOtpInput = z.infer<typeof verifyLoginOtpSchema>;
-  export type LoginInput = z.infer<typeof loginSchema>;
+export const githubCallbackSchema = z.object({
+  code: z.string().min(1, "GitHub authorization code is required"),
+  state: z.string().min(1, "OAuth state is required"),
+});
+
+// Types
+export type GithubCallbackInput = z.infer<typeof githubCallbackSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type VerifyLoginOtpInput = z.infer<typeof verifyLoginOtpSchema>;
+export type ForgetPasswordInput = z.infer<typeof forgetPasswordSchema>;
+export type VerifyResetOtpInput = z.infer<typeof verifyResetOtpSchema>;
+export type SetNewPasswordInput = z.infer<typeof setNewPasswordSchema>;
+export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;

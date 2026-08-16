@@ -39,7 +39,7 @@ export const loginUser = async (email: string, password: string) => {
         throw new Error("invalid email or password");
     }
 
-    const isValidPassword = bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
         throw new Error("invalid email or password");
@@ -157,10 +157,14 @@ export const getCurrentUser = async (userId: string) => {
             username: true,
             email: true,
             avatar: true,
-            provider: true,
             isEmailVerified: true,
             isActive: true,
             createdAt: true,
+            oauthAccounts: {
+                select: {
+                    provider: true,
+                },
+            },
         },
     });
 
@@ -389,7 +393,19 @@ export const loginWithOAuth = async (profile: OAuthProfile) => {
                     providerId: profile.providerId,
                 },
             });
+
+            user = await prisma.user.findUnique({
+                where: { id: user.id },
+                include: {
+                    oauthAccounts: true,
+                },
+            });
+        
+            if (!user) {
+                throw new ApiErrors(500, "User not found after linking OAuth account");
+            }
         }
+        
     }
 
     const accessToken = generateAccessToken(user.id);
