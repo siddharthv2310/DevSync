@@ -1,14 +1,7 @@
 import { AuthProvider } from "@prisma/client";
 import googleClient from "../config/google.js";
 import { ApiErrors } from "../common/errors/ApiErrors.js";
-
-export interface OAuthProfile {
-    email: string;
-    name: string;
-    avatar?: string;
-    provider: AuthProvider;
-    providerId: string;
-}
+import { OAuthProfile } from "./authType.js";
 
 export const verifyGoogleToken = async ( idToken: string ): Promise<OAuthProfile> => {
     

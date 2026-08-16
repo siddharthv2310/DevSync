@@ -48,9 +48,6 @@ model User {
 
   avatar    String?
 
-  provider  AuthProvider @default(LOCAL)
-  providerId String?
-
   refreshToken String?
 
   isEmailVerified Boolean @default(false)
@@ -59,15 +56,31 @@ model User {
   loginOtps LoginOtp[]
   passwordResetOtps PasswordResetOtp[]
 
+  oauthAccounts OAuthAccount[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+}
+model OAuthAccount{
+  id String @id @default(uuid())
+
+   provider  AuthProvider
+   providerId String
+
+   userId  String
+   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+   createdAt DateTime @default(now())
+
+  @@unique([provider, providerId])
+  @@index([userId])
 }
 
 
 
 enum AuthProvider{
-  LOCAL
+  EMAIL
   GOOGLE
   GITHUB
 }

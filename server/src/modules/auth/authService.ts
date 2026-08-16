@@ -5,7 +5,7 @@ import { generateOtp, hashOtp, getOtpExpiry } from "../../utils/OTP.js";
 import { sendLoginOtpEmail } from "../../utils/email.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { generateAccessToken, generateRefreshTokens, generateResetPasswordToken } from "../../utils/jwt.js";
-import { OAuthProfile } from "../../providers/googleProvider.js";
+import { OAuthProfile } from "../../providers/authType.js";
 
 export const createLoginOtp = async (userId: string) => {
     const otp = generateOtp();
@@ -342,51 +342,70 @@ export const resetPassword = async (userId: string, newPassword: string) => {
     });
 }
 
-export const loginWithOAuth = async(profile:OAuthProfile)=>{
+export const loginWithOAuth = async (profile: OAuthProfile) => {
     let user = await prisma.user.findUnique({
-        where:{
-            email : profile.email,
+        where: {
+            email: profile.email,
+        },
+        include: {
+            oauthAccounts: true,
         },
     });
 
-    if(!user){
+    if (!user) {
         user = await prisma.user.create({
-            data:{
-                email : profile.email,
-                name : profile.name,
+            data: {
+                name: profile.name,
+                email: profile.email,
                 ...(profile.avatar ? { avatar: profile.avatar } : {}),
-                provider : profile.provider,
-                providerId:profile.providerId,
                 isEmailVerified: true,
-            }
-        })
-    }
+                isActive: true,
 
-    else if(user.provider === "LOCAL"){
-        await prisma.user.update({
-            where:{
-                id:user.id,
+                oauthAccounts: {
+                    create: {
+                        provider: profile.provider,
+                        providerId: profile.providerId,
+                    },
+                },
             },
-            data:{
-                provider:profile.provider,
-                providerId:profile.providerId,
-                avatar:profile.avatar??user.avatar,
-                isEmailVerified : true,
+            include: {
+                oauthAccounts: true,
             },
         });
+    }
+
+    else {
+        const alreadyLinked = user.oauthAccounts.some(
+            (account) =>
+                account.provider === profile.provider &&
+                account.providerId === profile.providerId
+        );
+
+        if (!alreadyLinked) {
+            await prisma.oAuthAccount.create({
+                data: {
+                    userId: user.id,
+                    provider: profile.provider,
+                    providerId: profile.providerId,
+                },
+            });
+        }
     }
 
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshTokens(user.id);
 
-    const hashRefreshToken = await bcrypt.hash(refreshToken,10);
+    const hashRefreshToken = await bcrypt.hash(refreshToken, 10);
 
     await prisma.user.update({
-        where :{
-            id:user.id,
+        where: {
+            id: user.id,
         },
-        data:{
-            refreshToken:hashRefreshToken,
+        data: {
+            refreshToken: hashRefreshToken,
+        },
+        include: {
+            oauthAccounts: true,
         },
     });
 
@@ -396,7 +415,7 @@ export const loginWithOAuth = async(profile:OAuthProfile)=>{
             name: user.name,
             email: user.email,
             avatar: user.avatar,
-            provider: user.provider,
+            oauthAccounts: user.oauthAccounts,
         },
         accessToken,
         refreshToken,

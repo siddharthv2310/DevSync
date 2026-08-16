@@ -3,7 +3,8 @@ import { forgetPasswordSchema, googleAuthSchema, loginSchema, refreshTokenSchema
 import { forgetPassword, getCurrentUser, loginUser, loginWithOAuth, logoutUser, refreshAccessToken, resetPassword, verifyResetOtp } from "./authService.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { verifyLoginOtp } from "./authService.js";
-import { OAuthProfile, verifyGoogleToken } from "../../providers/googleProvider.js";
+import { verifyGoogleToken } from "../../providers/googleProvider.js";
+import { OAuthProfile } from "../../providers/authType.js";
 
 // export const healthCheck = (req:Request , res:Response)=>{
 //     res.status(200).json({success:true , message : "auth modeule working fine"});
