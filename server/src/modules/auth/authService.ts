@@ -5,6 +5,7 @@ import { generateOtp, hashOtp, getOtpExpiry } from "../../utils/OTP.js";
 import { sendLoginOtpEmail } from "../../utils/email.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { generateAccessToken, generateRefreshTokens, generateResetPasswordToken } from "../../utils/jwt.js";
+import { OAuthProfile } from "../../providers/googleProvider.js";
 
 export const createLoginOtp = async (userId: string) => {
     const otp = generateOtp();
@@ -340,6 +341,69 @@ export const resetPassword = async (userId: string, newPassword: string) => {
         },
     });
 }
+
+export const loginWithOAuth = async(profile:OAuthProfile)=>{
+    let user = await prisma.user.findUnique({
+        where:{
+            email : profile.email,
+        },
+    });
+
+    if(!user){
+        user = await prisma.user.create({
+            data:{
+                email : profile.email,
+                name : profile.name,
+                ...(profile.avatar ? { avatar: profile.avatar } : {}),
+                provider : profile.provider,
+                providerId:profile.providerId,
+                isEmailVerified: true,
+            }
+        })
+    }
+
+    else if(user.provider === "LOCAL"){
+        await prisma.user.update({
+            where:{
+                id:user.id,
+            },
+            data:{
+                provider:profile.provider,
+                providerId:profile.providerId,
+                avatar:profile.avatar??user.avatar,
+                isEmailVerified : true,
+            },
+        });
+    }
+
+    const accessToken = generateAccessToken(user.id);
+    const refreshToken = generateRefreshTokens(user.id);
+
+    const hashRefreshToken = await bcrypt.hash(refreshToken,10);
+
+    await prisma.user.update({
+        where :{
+            id:user.id,
+        },
+        data:{
+            refreshToken:hashRefreshToken,
+        },
+    });
+
+    return {
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+            provider: user.provider,
+        },
+        accessToken,
+        refreshToken,
+    };
+};
+
+
 
 
 

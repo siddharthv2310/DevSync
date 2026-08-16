@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from "express"
-import { forgetPasswordSchema, loginSchema, refreshTokenSchema, setNewPasswordSchema, verifyLoginOtpSchema, verifyResetOtpSchema } from "./authValidation.js";
-import { forgetPassword, getCurrentUser, loginUser, logoutUser, refreshAccessToken, resetPassword, verifyResetOtp } from "./authService.js";
+import { forgetPasswordSchema, googleAuthSchema, loginSchema, refreshTokenSchema, setNewPasswordSchema, verifyLoginOtpSchema, verifyResetOtpSchema } from "./authValidation.js";
+import { forgetPassword, getCurrentUser, loginUser, loginWithOAuth, logoutUser, refreshAccessToken, resetPassword, verifyResetOtp } from "./authService.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { verifyLoginOtp } from "./authService.js";
+import { OAuthProfile, verifyGoogleToken } from "../../providers/googleProvider.js";
 
 // export const healthCheck = (req:Request , res:Response)=>{
 //     res.status(200).json({success:true , message : "auth modeule working fine"});
@@ -223,4 +224,36 @@ export const setNewPasswordController = async ( req: Request, res: Response, nex
         next(error);
     }
 };
+
+export const googleOAuthController = async(req:Request,res:Response , next:NextFunction)=>{
+    const result =  googleAuthSchema.safeParse(req.body);
+
+    if(!result.success){
+        return res.status(400).json({
+            success:false,
+            message:"InvallidRequest",
+            error:result.error.flatten(),
+        });
+    }
+
+    try{
+        const profile : OAuthProfile = await verifyGoogleToken(result.data.idToken);
+
+        const {user , accessToken , refreshToken} = await  loginWithOAuth(profile);
+
+        return res.status(200).json({
+            success:true,
+            message:"Google login successful",
+            data:{
+                user,
+                accessToken,
+                refreshToken,
+            }
+        })
+
+    }
+    catch(error){
+        next(error);
+    }
+}
 
