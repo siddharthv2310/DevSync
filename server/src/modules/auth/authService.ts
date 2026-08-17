@@ -27,6 +27,27 @@ export const createLoginOtp = async (userId: string) => {
     })
     return otp;
 };
+export const createRegisterOtp = async (userId: string) => {
+    const otp = generateOtp();
+    const otpHash = hashOtp(otp);
+    const expiredAt = getOtpExpiry();
+
+    await prisma.registerOtp.deleteMany({
+        where: {
+            userId,
+        },
+    });
+
+    await prisma.registerOtp.create({
+        data: {
+            userId,
+            otpHash,
+            expiredAt,
+        },
+    });
+
+    return otp;
+};
 
 export const loginUser = async (email: string, password: string) => {
     const user = await prisma.user.findUnique({
@@ -54,6 +75,53 @@ export const loginUser = async (email: string, password: string) => {
 
     return { user, otp };
 };
+
+export const registerUser = async (name: string, username: string, email: string, password: string) => {
+
+    const existingEmail = await prisma.user.findUnique({
+        where: {
+            email,
+        },
+    });
+
+    if (existingEmail) {
+        throw new ApiErrors(409, "Email already registered");
+    }
+
+    // Check username
+    const existingUsername = await prisma.user.findUnique({
+        where: {
+            username,
+        },
+    });
+
+    if (existingUsername) {
+        throw new ApiErrors(409, "Username already taken");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+        data: {
+            name,
+            username,
+            email,
+            password: hashedPassword,
+            isEmailVerified: false,
+            isActive: false,
+        },
+    });
+
+    const otp = await createRegisterOtp(user.id);
+
+    // For now you're using TO_EMAIL because of Resend testing
+    await sendLoginOtpEmail(process.env.TO_EMAIL!, otp);
+
+    return {
+        user,
+    };
+};
+
 
 export const verifyLoginOtp = async (email: string, otp: string,) => {
 
@@ -146,6 +214,87 @@ export const verifyLoginOtp = async (email: string, otp: string,) => {
     return { user, accessToken, refreshToken };
 
 }
+
+export const verifyRegisterOtp = async ( email: string, otp: string) => {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+  
+    if (!user) {
+      throw new ApiErrors(404, "User not found");
+    }
+  
+    const registerOtp = await prisma.registerOtp.findFirst({
+      where: {
+        userId: user.id,
+      },
+    });
+  
+    if (!registerOtp) {
+      throw new ApiErrors(400, "OTP not found or already used");
+    }
+  
+    if (registerOtp.expiredAt < new Date()) {
+      await prisma.registerOtp.delete({
+        where: { id: registerOtp.id },
+      });
+  
+      throw new ApiErrors(400, "OTP has expired");
+    }
+  
+    if (registerOtp.attempts >= 5) {
+      await prisma.registerOtp.delete({
+        where: { id: registerOtp.id },
+      });
+  
+      throw new ApiErrors(429, "Too many OTP attempts");
+    }
+  
+    const hashedOtp = hashOtp(otp);
+  
+    if (hashedOtp !== registerOtp.otpHash) {
+      await prisma.registerOtp.update({
+        where: { id: registerOtp.id },
+        data: {
+          attempts: {
+            increment: 1,
+          },
+        },
+      });
+  
+      throw new ApiErrors(400, "Invalid OTP");
+    }
+  
+    await prisma.registerOtp.delete({
+      where: { id: registerOtp.id },
+    });
+  
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        isActive: true,
+      },
+    });
+  
+    const accessToken = generateAccessToken(user.id);
+    const refreshToken = generateRefreshTokens(user.id);
+  
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+  
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshToken: hashedRefreshToken,
+      },
+    });
+  
+    return {
+      user,
+      accessToken,
+      refreshToken,
+    };
+  };
 
 export const getCurrentUser = async (userId: string) => {
 
@@ -376,9 +525,7 @@ export const loginWithOAuth = async (profile: OAuthProfile) => {
                 oauthAccounts: true,
             },
         });
-    }
-
-    else {
+    } else {
         const alreadyLinked = user.oauthAccounts.some(
             (account) =>
                 account.provider === profile.provider &&
@@ -400,12 +547,11 @@ export const loginWithOAuth = async (profile: OAuthProfile) => {
                     oauthAccounts: true,
                 },
             });
-        
+
             if (!user) {
                 throw new ApiErrors(500, "User not found after linking OAuth account");
             }
         }
-        
     }
 
     const accessToken = generateAccessToken(user.id);

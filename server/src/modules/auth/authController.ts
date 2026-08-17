@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"
-import { forgetPasswordSchema, githubCallbackSchema, googleAuthSchema, loginSchema, setNewPasswordSchema, verifyLoginOtpSchema, verifyResetOtpSchema } from "./authValidation.js";
-import { forgetPassword, getCurrentUser, loginUser, loginWithOAuth, logoutUser, refreshAccessToken, resetPassword, verifyResetOtp } from "./authService.js";
+import { forgetPasswordSchema, githubCallbackSchema, googleAuthSchema, loginSchema, registerSchema, setNewPasswordSchema, verifyLoginOtpSchema, verifyRegisterOtpSchema, verifyResetOtpSchema } from "./authValidation.js";
+import { forgetPassword, getCurrentUser, loginUser, loginWithOAuth, logoutUser, refreshAccessToken, registerUser, resetPassword, verifyRegisterOtp, verifyResetOtp } from "./authService.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import { verifyLoginOtp } from "./authService.js";
 import { verifyGoogleToken } from "../../providers/googleProvider.js";
@@ -45,6 +45,39 @@ export const login = async (req: Request, res: Response) => {
         });
     }
 };
+
+export const registerController = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const result = registerSchema.safeParse(req.body);
+  
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request",
+        errors: result.error.flatten(),
+      });
+    }
+  
+    try {
+      const { name, username, email, password } = result.data;
+  
+      await registerUser(name, username, email, password);
+  
+      return res.status(201).json({
+        success: true,
+        message: "Account created. Please verify the OTP sent to your email.",
+        data: {
+          email,
+          requiresOtp: true,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
 export const completeVerifyLoginOtp = async (req: Request, res: Response) => {
     const { data, error } = verifyLoginOtpSchema.safeParse(req.body);
@@ -100,6 +133,57 @@ export const completeVerifyLoginOtp = async (req: Request, res: Response) => {
     }
 };
 
+export const verifyRegisterOtpController = async (req: Request, res: Response, next: NextFunction) => {
+   
+    const result = verifyRegisterOtpSchema.safeParse(req.body);
+  
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request",
+        errors: result.error.flatten(),
+      });
+    }
+  
+    try {
+      const { email, otp } = result.data;
+  
+      const { user, accessToken, refreshToken } = await verifyRegisterOtp(email, otp);
+  
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+      };
+  
+      res.cookie("accessToken", accessToken, {
+        ...cookieOptions,
+        maxAge: 15 * 60 * 1000,
+      });
+  
+      res.cookie("refreshToken", refreshToken, {
+        ...cookieOptions,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+  
+      return res.status(200).json({
+        success: true,
+        message: "Account verified successfully.",
+        data: {
+          user: {
+            userId: user.id,
+            userName: user.name,
+            userEmail: user.email,
+          },
+        },
+      });
+    }
+    catch (error) {
+      next(error);
+    }
+  };
+
+
 export const getCurrentUserController = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = await getCurrentUser(req.user!.userId);
@@ -114,43 +198,44 @@ export const getCurrentUserController = async (req: Request, res: Response, next
     }
 };
 
+
 export const refresh = async (req: Request, res: Response, next: NextFunction) => {
+
     const refreshToken = req.cookies.refreshToken;
-
+  
     if (!refreshToken) {
-        return res.status(401).json({
-            success: false,
-            message: "Refresh token missing",
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token missing",
+      });
     }
-
+  
     try {
-
-        const accessToken = await refreshAccessToken(refreshToken);
-
-        res.cookie("accessToken", accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            maxAge: 15 * 60 * 1000,
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Access Token refreshed",
-        });
+      const { accessToken } = await refreshAccessToken(refreshToken);
+  
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 15 * 60 * 1000,
+      });
+  
+      return res.status(200).json({
+        success: true,
+        message: "Access token refreshed",
+      });
     }
     catch (error) {
-        if (error instanceof ApiErrors)
-            return res.status(401).json({
-                success: false,
-                message: error.message
-            });
-
-        next(error);
+      if (error instanceof ApiErrors) {
+        return res.status(401).json({
+          success: false,
+          message: error.message,
+        });
+      }
+  
+      next(error);
     }
-
-};
+  };
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -300,14 +385,13 @@ export const googleOAuthController = async (req: Request, res: Response, next: N
 }
 
 export const githubRedirectController = (req: Request, res: Response) => {
-
     const state = crypto.randomBytes(32).toString("hex");
 
     res.cookie("github_oauth_state", state, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 10 * 60 * 1000, // 10 minutes
+        maxAge: 10 * 60 * 1000,
     });
 
     const githubUrl =
@@ -334,7 +418,6 @@ export const githubCallbackController = async (req: Request, res: Response, next
         });
     }
 
-
     try {
         const { code, state } = result.data;
 
@@ -345,7 +428,7 @@ export const githubCallbackController = async (req: Request, res: Response, next
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
         });
-        
+
         if (!storedState || storedState !== state) {
             throw new ApiErrors(401, "Invalid OAuth state");
         }
@@ -354,7 +437,6 @@ export const githubCallbackController = async (req: Request, res: Response, next
 
         const data = await loginWithOAuth(profile);
 
-        // Store Refresh Token
         res.cookie("refreshToken", data.refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
@@ -362,7 +444,6 @@ export const githubCallbackController = async (req: Request, res: Response, next
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
-        // Store Access Token
         res.cookie("accessToken", data.accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
@@ -370,10 +451,9 @@ export const githubCallbackController = async (req: Request, res: Response, next
             maxAge: 15 * 60 * 1000,
         });
 
-
         return res.redirect(`${process.env.FRONTEND_URL}/auth/success`);
-
     } catch (error) {
         next(error);
     }
 };
+

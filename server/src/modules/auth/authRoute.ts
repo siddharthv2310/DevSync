@@ -1,5 +1,5 @@
 import { Router } from "express";
-import  {completeVerifyLoginOtp,forgetPasswordController,getCurrentUserController, githubCallbackController, githubRedirectController, googleOAuthController, login, logout, refresh, setNewPasswordController, verifyResetOtpController} from "./authController.js";
+import  {completeVerifyLoginOtp,forgetPasswordController,getCurrentUserController, githubCallbackController, githubRedirectController, googleOAuthController, login, logout, refresh, registerController, setNewPasswordController, verifyRegisterOtpController, verifyResetOtpController} from "./authController.js";
 import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { resetPasswordMiddleware } from "../../middlewares/resetPasswordMiddleware.js";
 
@@ -7,6 +7,8 @@ import { resetPasswordMiddleware } from "../../middlewares/resetPasswordMiddlewa
 const router = Router();
 
 // router.get("/health", healthCheck);
+router.post("/register",registerController);
+router.post("/verify-register-otp", verifyRegisterOtpController);
 router.post("/login",login);
 router.post("/login/verify-otp",completeVerifyLoginOtp);
 router.get("/me",authMiddleware , getCurrentUserController);
@@ -17,6 +19,6 @@ router.post("/verify-reset-otp", verifyResetOtpController);
 router.post("/reset-new-password",resetPasswordMiddleware, setNewPasswordController);
 router.post("/oauth/google",googleOAuthController);
 router.get("/oauth/github", githubRedirectController);
-router.post("/oauth/github/callback", githubCallbackController);
+router.get("/oauth/github/callback", githubCallbackController);
 
 export default router;
