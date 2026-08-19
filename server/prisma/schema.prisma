@@ -70,6 +70,7 @@ model User {
   loginOtps LoginOtp[]
   passwordResetOtps PasswordResetOtp[]
   registerOtp RegisterOtp[]
+  organizations OrganizationMember[]
 
   oauthAccounts OAuthAccount[]
 
@@ -92,10 +93,45 @@ model OAuthAccount{
   @@index([userId])
 }
 
+model Organization {
+  id          String @id @default(uuid())
+  name        String
+  slug        String @unique
+  description String?
+  avatar      String?
+  isActive    Boolean @default(true)
+
+  members OrganizationMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrganizationMember {
+  id String @id @default(uuid())
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  role OrganizationRole @default(MEMBER)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([organizationId, userId])
+}
+
 
 
 enum AuthProvider{
   EMAIL
   GOOGLE
   GITHUB
+}
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
 }
