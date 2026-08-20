@@ -6,14 +6,6 @@ interface JwtPayload {
   userId: string;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload;
-    }
-  }
-}
-
 export const authMiddleware = ( req: Request,res: Response, next: NextFunction) => {
   try {
 
@@ -30,8 +22,6 @@ export const authMiddleware = ( req: Request,res: Response, next: NextFunction) 
     if (!token) {
       throw new ApiErrors(401, "Access token missing");
     }
-
-    console.log("Using token:", token);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
 

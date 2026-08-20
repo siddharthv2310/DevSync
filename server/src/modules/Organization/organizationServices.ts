@@ -1,15 +1,16 @@
 import { OrganizationRole } from "@prisma/client";
 import prisma from "../../config/prisma.js"
+import { createOrganisationinput } from "./organizationvalidation.js";
+import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
-interface createOrganisationData{
-    name:string ,
-    slug:string ,
-    description?:string ,
-    avatar?:string ,
-}
+// interface createOrganisationData{
+//     name:string ,
+//     slug:string ,
+//     description?:string ,
+//     avatar?:string ,
+// }
 
-export const createOrganisation = async( userId:string , data:createOrganisationData)=>{
-    try{
+export const createOrganisation = async( userId:string , data:createOrganisationinput)=>{
         const existingOrganisation = await prisma.organization.findUnique({
             where:{
                 slug : data.slug,
@@ -17,7 +18,7 @@ export const createOrganisation = async( userId:string , data:createOrganisation
         });
 
         if(existingOrganisation){
-            throw new Error("Organisation with this slug already exists");
+            throw new ApiErrors(409,"Organisation with this slug already exists");
         }
 
         const organization = await prisma.$transaction(async (tx) => {
@@ -43,10 +44,45 @@ export const createOrganisation = async( userId:string , data:createOrganisation
     
         return organization;
 
-    }
-    catch(error){
-        throw new Error("Failed to create organisation");
-    }
+}
 
+export const getUserOrganizations = async(userId:string)=>{
+    const organizations = await prisma.organization.findMany({
+        where:{
+            isActive:true,
+            members:{
+                some:{
+                    userId : userId,
+                },
+            },
+        },
+
+        select:{
+            id:true,
+            name:true,
+            slug: true,
+            description: true,
+            avatar: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+
+            members:{
+                where:{
+                    userId,
+                },
+                select:{
+                    joinedAt:true,
+                    role:true,
+                },
+            },
+        },
+
+        orderBy:{
+            createdAt:"desc"
+        }
+    });
+
+    return organizations;
 }
 
