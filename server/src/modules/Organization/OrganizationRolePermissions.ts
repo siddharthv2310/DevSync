@@ -1,0 +1,31 @@
+import { OrganizationRole } from "@prisma/client";
+import { organizationPermission } from "./organizationPermission.js";
+
+export const rolePermissions: Record<OrganizationRole,organizationPermission[]> = {
+    [OrganizationRole.OWNER]: [
+        organizationPermission.VIEW_ORGANIZATION,
+        organizationPermission.UPDATE_ORGANIZATION,
+        organizationPermission.DELETE_ORGANIZATION,
+
+        organizationPermission.VIEW_MEMBERS,
+        organizationPermission.INVITE_MEMBERS,
+        organizationPermission.REMOVE_MEMBERS,
+        organizationPermission.UPDATE_MEMBER_ROLE
+    ],
+    [OrganizationRole.ADMIN]:[
+        organizationPermission.VIEW_ORGANIZATION,
+        organizationPermission.UPDATE_ORGANIZATION,
+
+        organizationPermission.VIEW_MEMBERS,
+        organizationPermission.INVITE_MEMBERS,
+        organizationPermission.REMOVE_MEMBERS,
+        organizationPermission.UPDATE_MEMBER_ROLE
+    ],
+
+    [OrganizationRole.MEMBER]:[
+        organizationPermission.VIEW_ORGANIZATION,
+        organizationPermission.VIEW_MEMBERS
+    ]
+
+
+};
