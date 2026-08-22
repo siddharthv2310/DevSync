@@ -148,25 +148,25 @@ model OrganizationMember {
 
 
 model OrganizationInvitation{
-  id @id @default(uuid())
+  id String @id @default(uuid())
 
   organizationId String
-  organisation Organization @relation(fields:[organisationId] , references:[id] , onDelete:Cascade)
+  organisation Organization @relation(fields:[organizationId] , references:[id] , onDelete:Cascade)
 
-  invitedById string 
-  invitedBy User @relation("organizationInviter" , fields:[invitedById] , refrences:[id] , onDelete:Cascade)
+  invitedById String 
+  invitedBy User @relation("organizationInviter" , fields:[invitedById] , references:[id] , onDelete:Cascade)
 
-  email string 
+  email String 
 
   role OrganizationRole @default(MEMBER)
 
-  tokenHash string
+  tokenHash String
 
   expiredAt DateTime
 
   invitedAt DateTime @default(now())
 
-  acceptedAt DateTime
+  acceptedAt DateTime?
 
   @@unique([organizationId , email])
   @@index([email])

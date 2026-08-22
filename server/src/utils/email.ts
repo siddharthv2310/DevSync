@@ -27,3 +27,26 @@ export const sendLoginOtpEmail = async (to: string , otp: string,) => {
 
   return data;
 };
+
+
+export const sendOrganizationInvitationEmail = async(email: string,organizationName:string , token :string)=>{
+  const inviteUrl = `${process.env.FRONTEND_URL}/invite/${token}`;
+
+  await resend.emails.send({
+    from:"onboarding@resend.dev",
+    to: process.env.TO_EMAIL!,
+    subject : `Invitation to join ${organizationName}`,
+    html :`
+          <h2>You're invited to join ${organizationName}</h2>
+
+  ]       <p>Click the button below to accept the invitation.</p>
+
+          <a href="${inviteUrl}"
+              style="padding:12px 20px;background:#2563EB;color:white;text-decoration:none;border-radius:8px;">
+              Accept Invitation
+          </a>
+
+          <p>This invitation expires in 7 days.</p>
+    `
+  });
+};
