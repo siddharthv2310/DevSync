@@ -1,3 +1,4 @@
+import { OrganizationRole } from "@prisma/client";
 import {z} from "zod";
 
 export const createOrganizationSchema = z.object({
@@ -30,6 +31,36 @@ export const createOrganizationSchema = z.object({
     .optional(),
 })
 
+export const organizationMembersQuerySchema = z.object({
+    page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(1),
+
+    limit:z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20)
+
+})
+export const updateMemberRoleSchema = z.object({
+    role: z.enum([
+        OrganizationRole.ADMIN,
+        OrganizationRole.MEMBER
+    ])
+});
+
+export const transferOwnershipSchema = z.object({
+    userId: z.string().uuid("Invalid user ID")
+});
+
+
 // type define
 
 export type createOrganisationinput =z.infer<typeof createOrganizationSchema>;
+export type OrganizationMembersQuery = z.infer< typeof organizationMembersQuerySchema>;
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+export type TransferOwnershipInput = z.infer<typeof transferOwnershipSchema>;

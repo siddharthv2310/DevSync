@@ -6,6 +6,8 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.VIEW_ORGANIZATION,
         organizationPermission.UPDATE_ORGANIZATION,
         organizationPermission.DELETE_ORGANIZATION,
+        organizationPermission.TRANSFER_OWNERSHIP,
+
 
         organizationPermission.VIEW_MEMBERS,
         organizationPermission.INVITE_MEMBERS,

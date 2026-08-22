@@ -12,6 +12,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+
+
 model PasswordResetOtp{
   id       String @id @default(uuid())
   userId   String
@@ -24,6 +27,9 @@ model PasswordResetOtp{
 
   @@index([userId])
 }
+
+
+
 
 model LoginOtp{
   id       String  @id @default(uuid())
@@ -39,6 +45,9 @@ model LoginOtp{
 
 }
 
+
+
+
 model RegisterOtp{
   id String @id @default(uuid())
 
@@ -52,6 +61,9 @@ model RegisterOtp{
 
   @@index([userId])
 }
+
+
+
 
 model User {
   id        String      @id @default(uuid())
@@ -71,13 +83,17 @@ model User {
   passwordResetOtps PasswordResetOtp[]
   registerOtp RegisterOtp[]
   organizations OrganizationMember[]
+  sentInvitation OrganizationInvitation[] @relation("organizationInviter")
 
   oauthAccounts OAuthAccount[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
 }
+
+
+
+
 model OAuthAccount{
   id String @id @default(uuid())
 
@@ -93,6 +109,8 @@ model OAuthAccount{
   @@index([userId])
 }
 
+
+
 model Organization {
   id          String @id @default(uuid())
   name        String
@@ -102,10 +120,13 @@ model Organization {
   isActive    Boolean @default(true)
 
   members OrganizationMember[]
+  invitations OrganizationInvitation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
 
 model OrganizationMember {
   id String @id @default(uuid())
@@ -121,6 +142,35 @@ model OrganizationMember {
   joinedAt DateTime @default(now())
 
   @@unique([organizationId, userId])
+}
+
+
+
+
+model OrganizationInvitation{
+  id @id @default(uuid())
+
+  organizationId String
+  organisation Organization @relation(fields:[organisationId] , references:[id] , onDelete:Cascade)
+
+  invitedById string 
+  invitedBy User @relation("organizationInviter" , fields:[invitedById] , refrences:[id] , onDelete:Cascade)
+
+  email string 
+
+  role OrganizationRole @default(MEMBER)
+
+  tokenHash string
+
+  expiredAt DateTime
+
+  invitedAt DateTime @default(now())
+
+  acceptedAt DateTime
+
+  @@unique([organizationId , email])
+  @@index([email])
+  @@index([expiredAt])
 }
 
 

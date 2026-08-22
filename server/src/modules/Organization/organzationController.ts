@@ -1,7 +1,8 @@
 import {Request , Response ,NextFunction} from "express";
-import { createOrganizationSchema } from "./organizationvalidation.js";
+import { createOrganizationSchema, organizationMembersQuerySchema, transferOwnershipSchema, updateMemberRoleSchema } from "./organizationvalidation.js";
 import * as organizationServices from "./organizationServices.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
+import { OrganizationRole } from "@prisma/client";
 
 export const createOrganizationController = async (req:Request , res:Response , next:NextFunction)=>{
     const validatedData = createOrganizationSchema.safeParse(req.body);
@@ -81,3 +82,96 @@ export const getOrganizationInfo = async (req: Request, res: Response ) => {
         }
     });
 };
+
+export const getOrganizationMembers = async(req:Request , res:Response ,next:NextFunction)=>{
+    const organization = req.organization;
+
+    if(!organization){
+        throw new ApiErrors(500,"Organization context is missing");
+    }
+
+    const query = organizationMembersQuerySchema.parse(req.query );
+
+    const result = await organizationServices.getOrganizationMembers(organization.id, query.page , query.limit);
+
+    return res.status(200).json({
+        success: true,
+        message: "Organization members fetched successfully",
+        data: result.members,
+        pagination: result.pagination,
+    });
+};
+
+export const updateMemberRole = async (req: Request, res: Response) => {
+    const organizationId = req.params.organisationId as string;
+    const userId  = req.params.userId as string;
+
+    if(!organizationId || !userId){
+        throw new ApiErrors(401,"organizationId and UserId required")
+    }
+
+    const data = updateMemberRoleSchema.parse(req.body);
+
+
+    const actorUserId = req.user!.userId;
+
+    const membership =
+        await organizationServices.updateMemberRole(
+            organizationId,
+            actorUserId,
+            userId,
+            data.role as OrganizationRole
+        );
+
+    return res.status(200).json({
+        success: true,
+        message: "Member role updated successfully",
+        data: membership
+    });
+};
+
+export const removeMember = async ( req: Request, res: Response) => {
+
+    const organizationId = req.params.organisationId as string;
+    const userId  = req.params.userId as string;
+
+    const actorUserId = req.user!.userId;
+
+    await organizationServices.removeMember(
+        organizationId,
+        actorUserId,
+        userId
+    );
+
+    return res.status(200).json({
+        success: true,
+        message: "Member removed successfully"
+    });
+};
+
+export const leaveOrganization = async(req:Request , res:Response ,next:NextFunction)=>{
+    const organizationId = req.organization!.id;
+    const userId = req.user!.userId;
+
+    await organizationServices.leaveOrganization(organizationId , userId);
+
+    return res.status(200).json({
+        success: true,
+        message: "You have left the organization successfully"
+    });
+}
+export const transferOwnership = async(req:Request , res:Response ,next:NextFunction)=>{
+    const organizationId = req.organization!.id;
+    const currentOwnerId = req.user!.userId;
+
+    const data = transferOwnershipSchema.parse(req.body);
+
+    await organizationServices.transferOwnership(organizationId, currentOwnerId,data.userId);
+
+    return res.status(200).json({
+        success:true,
+        message:"Ownership transferred successfully",
+    });
+
+}
+
