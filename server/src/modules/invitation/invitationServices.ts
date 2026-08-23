@@ -1,6 +1,6 @@
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import prisma from "../../config/prisma.js";
-import { OrganizationRole } from "@prisma/client";
+import { InvitationStatus, OrganizationRole } from "@prisma/client";
 import { generateInvitationToken, hashInvitationToken } from "../../utils/invitation.js";
 import { sendOrganizationInvitationEmail } from "../../utils/email.js";
 import { error } from "node:console";
@@ -223,6 +223,64 @@ export const getOrganizationInvitations = async (
 
 };
 
+
+export const cancelInvitation = async (
+    organizationId: string,
+    invitationId: string,
+    actorRole: OrganizationRole
+) => {
+
+    const invitation = await prisma.organizationInvitation.findUnique({
+        where: {
+            id: invitationId
+        },
+        select: {
+            id: true,
+            organizationId: true,
+            role: true,
+            status: true
+        }
+    });
+
+    if (!invitation || invitation.organizationId !== organizationId) {
+        throw new ApiErrors(404, "Invitation not found");
+    }
+
+    if (invitation.status === InvitationStatus.ACCEPTED) {
+        throw new ApiErrors(
+            409,
+            "Accepted invitations cannot be cancelled"
+        );
+    }
+
+    if (invitation.status === InvitationStatus.CANCELLED) {
+        throw new ApiErrors(
+            409,
+            "Invitation is already cancelled"
+        );
+    }
+
+    // Admin cannot cancel an invitation that grants ADMIN access.
+    if (
+        actorRole === OrganizationRole.ADMIN &&
+        invitation.role === OrganizationRole.ADMIN
+    ) {
+        throw new ApiErrors(
+            403,
+            "Admins cannot cancel admin invitations"
+        );
+    }
+
+    await prisma.organizationInvitation.update({
+        where: {
+            id: invitationId
+        },
+        data: {
+            status: InvitationStatus.CANCELLED
+        }
+    });
+
+};
 
 
 

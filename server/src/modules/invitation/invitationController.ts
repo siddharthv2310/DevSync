@@ -58,3 +58,24 @@ export const getOrganizationInvitations = async (req: Request,res: Response) => 
     });
 
 };
+
+export const cancelInvitation = async (req: Request,res: Response) => {
+
+    const organizationId = req.organization!.id;
+
+    const actorRole = req.organizationMember!.role;
+
+    const  invitationId  = req.params.invitationId as string;
+
+    await invitationService.cancelInvitation(
+        organizationId,
+        invitationId,
+        actorRole
+    );
+
+    return res.status(200).json({
+        success: true,
+        message: "Invitation cancelled successfully"
+    });
+
+};
