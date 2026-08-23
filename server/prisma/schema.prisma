@@ -185,13 +185,13 @@ model OrganizationJoinRequest{
   id String @id @default(uuid())
 
   userId String 
-  user User relation(fields:[userId] , references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId] , references:[id],onDelete:Cascade)
 
   organizationId String
-  organization Organization relation(fiels:[organizationId]:references:[id],onDelete:Cascade)
+  organization Organization @relation(fields:[organizationId] , references:[id],onDelete:Cascade)
 
-  reviewedById String
-  revieweddBy User relation("JoinRequestReviewer", fields:[reviewedById] , references:[id] , onDelete:SetNull)
+  reviewedById String?
+  reviewedBy User? @relation("JoinRequestReviewer", fields:[reviewedById] , references:[id] , onDelete:SetNull)
 
   message String?
 
@@ -200,7 +200,7 @@ model OrganizationJoinRequest{
   reviewedAt DateTime?
 
   requestedAt DateTime @default(now())
-  updatedAt DateTime?
+  updatedAt DateTime @updatedAt
 
   @@unique([organizationId, userId])
   @@index([organizationId, status])

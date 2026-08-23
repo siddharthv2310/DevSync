@@ -1,8 +1,8 @@
-import { ApiErrors } from "../../common/errors/ApiErrors.js";
-import prisma from "../../config/prisma.js";
+import { ApiErrors } from "../../../common/errors/ApiErrors.js";
+import prisma from "../../../config/prisma.js";
 import { InvitationStatus, OrganizationRole } from "@prisma/client";
-import { generateInvitationToken, hashInvitationToken } from "../../utils/invitation.js";
-import { sendOrganizationInvitationEmail } from "../../utils/email.js";
+import { generateInvitationToken, hashInvitationToken } from "../../../utils/invitation.js";
+import { sendOrganizationInvitationEmail } from "../../../utils/email.js";
 import { error } from "node:console";
 
 

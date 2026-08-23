@@ -13,6 +13,7 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.INVITE_MEMBERS,
         organizationPermission.VIEW_INVITATIONS,
         organizationPermission.CANCEL_INVITATION,
+        organizationPermission.VIEW_JOIN_REQUESTS,
         organizationPermission.REMOVE_MEMBERS,
         organizationPermission.UPDATE_MEMBER_ROLE
     ],
@@ -24,6 +25,7 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.INVITE_MEMBERS,
         organizationPermission.VIEW_INVITATIONS,
         organizationPermission.CANCEL_INVITATION,
+        organizationPermission.VIEW_JOIN_REQUESTS,
         organizationPermission.REMOVE_MEMBERS,
         organizationPermission.UPDATE_MEMBER_ROLE
     ],

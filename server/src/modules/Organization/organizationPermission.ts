@@ -9,6 +9,7 @@ export enum organizationPermission{
     INVITE_MEMBERS = "members:invite",
     VIEW_INVITATIONS = "invitations:view",
     CANCEL_INVITATION = "invitations:cancel",
+    VIEW_JOIN_REQUESTS = "join-requests:view",
     REMOVE_MEMBERS = "members:remove",
     UPDATE_MEMBER_ROLE = "members:update-role"
 }

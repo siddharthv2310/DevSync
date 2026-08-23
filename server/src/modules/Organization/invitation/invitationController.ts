@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 
 import * as invitationService from "./invitationServices.js";
 import { createInvitationSchema } from "./invitationValidation.js";
-import { ApiErrors } from "../../common/errors/ApiErrors.js";
+import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 export const createInvitation = async (
     req: Request,
