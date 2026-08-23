@@ -183,5 +183,46 @@ export const acceptInvitation = async (token:string , userId:string)=>{
         organizationName: invitation.organization.name,
         role: invitation.role
     };
-
 }
+
+
+export const getOrganizationInvitations = async (
+    organizationId: string
+) => {
+
+    const invitations =
+        await prisma.organizationInvitation.findMany({
+            where: {
+                organizationId,
+                acceptedAt: null,
+                expiredAt: {
+                    gt: new Date()
+                }
+            },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                expiredAt: true,
+                invitedAt: true,
+
+                invitedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        avatar: true
+                    }
+                }
+            },
+            orderBy: {
+                invitedAt: "desc"
+            }
+        });
+
+    return invitations;
+
+};
+
+
+
+

@@ -44,3 +44,17 @@ export const acceptInvitation = async ( req: Request, res: Response) => {
         data: result
     });
 };
+
+export const getOrganizationInvitations = async (req: Request,res: Response) => {
+
+    const organizationId = req.organization!.id;
+
+    const invitations = await invitationService.getOrganizationInvitations(organizationId);
+
+    return res.status(200).json({
+        success: true,
+        message: "Invitations fetched successfully",
+        data: invitations
+    });
+
+};

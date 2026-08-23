@@ -166,6 +166,8 @@ model OrganizationInvitation{
 
   invitedAt DateTime @default(now())
 
+  status InvitationStatus @default(PENDING)
+
   acceptedAt DateTime?
 
   @@unique([organizationId , email])
@@ -184,4 +186,10 @@ enum OrganizationRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+enum InvitationStatus{
+  PENDING
+  ACCEPTED
+  CANCELLED
 }
