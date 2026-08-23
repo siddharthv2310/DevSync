@@ -10,6 +10,10 @@ export const createInvitationSchema = z.object({
     ]).default(OrganizationRole.MEMBER),
 })
 
+export const acceptInvitationSchema = z.object({
+    token:z. string().min(1,"Invitation token is required"),
+})
+
 // type
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;

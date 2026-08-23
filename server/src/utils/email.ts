@@ -32,6 +32,8 @@ export const sendLoginOtpEmail = async (to: string , otp: string,) => {
 export const sendOrganizationInvitationEmail = async(email: string,organizationName:string , token :string)=>{
   const inviteUrl = `${process.env.FRONTEND_URL}/invite/${token}`;
 
+  console.log(token);
+
   await resend.emails.send({
     from:"onboarding@resend.dev",
     to: process.env.TO_EMAIL!,

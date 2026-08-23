@@ -8,5 +8,6 @@ const router = Router();
 router.use("/auth",authRoutes);
 router.use("/organization",organizationRoutes);
 router.use("/organizations/:organizationId/invitations",invitationsRoute);
+router.use("/invitations", invitationsRoute);
 
 export default router;

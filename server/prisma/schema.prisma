@@ -151,7 +151,7 @@ model OrganizationInvitation{
   id String @id @default(uuid())
 
   organizationId String
-  organisation Organization @relation(fields:[organizationId] , references:[id] , onDelete:Cascade)
+  organization Organization @relation(fields:[organizationId] , references:[id] , onDelete:Cascade)
 
   invitedById String 
   invitedBy User @relation("organizationInviter" , fields:[invitedById] , references:[id] , onDelete:Cascade)
