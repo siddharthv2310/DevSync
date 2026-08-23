@@ -2,9 +2,10 @@ import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import prisma from "../../config/prisma.js";
 import { OrganizationRole } from "@prisma/client";
 import { generateInvitationToken } from "../../utils/invitation.js";
+import { sendOrganizationInvitationEmail } from "../../utils/email.js";
 
 
-export const createInvition = async(organizationId: string, invitedById: string, email: string, role: OrganizationRole)=>{
+export const createInvitation = async(organizationId: string, invitedById: string, email: string, role: OrganizationRole)=>{
     const inviter = await prisma.user.findUnique({
         where: {
             id: invitedById
@@ -46,7 +47,7 @@ export const createInvition = async(organizationId: string, invitedById: string,
 
     const { token, tokenHash } = generateInvitationToken();
 
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiredAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const organization = await prisma.$transaction(async(tx)=>{
 
@@ -68,16 +69,26 @@ export const createInvition = async(organizationId: string, invitedById: string,
                 data: {
                     tokenHash,
                     role,
-                    expiresAt,
+                    expiredAt,
                     acceptedAt: null
-                }ex
+                }
             });
         } 
-        
-
+        else {
+            await tx.organizationInvitation.create({
+                data: {
+                    organizationId,
+                    invitedById,
+                    email,
+                    role,
+                    tokenHash,
+                    expiredAt
+                }
+            });
+        }
+        return organization;
     })
 
-
-
+    await sendOrganizationInvitationEmail(email,organization.name , token);
 
 }
