@@ -84,6 +84,8 @@ model User {
   registerOtp RegisterOtp[]
   organizations OrganizationMember[]
   sentInvitation OrganizationInvitation[] @relation("organizationInviter")
+  joinRequests OrganizationJoinRequest[] 
+  reviewedJoinRequest OrganizationJoinRequest[] @relation("JoinRequestReviewer")
 
   oauthAccounts OAuthAccount[]
 
@@ -121,6 +123,7 @@ model Organization {
 
   members OrganizationMember[]
   invitations OrganizationInvitation[]
+  joinRequests OrganizationJoinRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -177,6 +180,36 @@ model OrganizationInvitation{
 
 
 
+model OrganizationJoinRequest{
+
+  id String @id @default(uuid())
+
+  userId String 
+  user User relation(fields:[userId] , references:[id],onDelete:Cascade)
+
+  organizationId String
+  organization Organization relation(fiels:[organizationId]:references:[id],onDelete:Cascade)
+
+  reviewedById String
+  revieweddBy User relation("JoinRequestReviewer", fields:[reviewedById] , references:[id] , onDelete:SetNull)
+
+  message String?
+
+  status joinRequestStatus @default(PENDING)
+
+  reviewedAt DateTime?
+
+  requestedAt DateTime @default(now())
+  updatedAt DateTime?
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, status])
+  @@index([userId])
+
+}
+
+
+
 enum AuthProvider{
   EMAIL
   GOOGLE
@@ -192,4 +225,9 @@ enum InvitationStatus{
   PENDING
   ACCEPTED
   CANCELLED
+}
+enum joinRequestStatus{
+  PENDING
+  APPROVED
+  REJECTED
 }
