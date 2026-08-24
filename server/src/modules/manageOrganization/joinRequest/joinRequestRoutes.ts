@@ -12,7 +12,7 @@ router.post("/",authMiddleware ,createJoinRequest);
 router.get("/",authMiddleware ,organizationMiddleware, requireOrganizationPermission(organizationPermission.VIEW_JOIN_REQUESTS),getOrganizationJoinRequests)
 router.post("/:requestId/approve",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.APPROVE_JOIN_REQUEST),approveJoinRequest)
 router.post("/:requestId/reject",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.REJECT_JOIN_REQUEST),rejectJoinRequest);
-router.post("/me",authMiddleware,getMyJoinRequest);
+router.get("/me",authMiddleware,getMyJoinRequest);
 
 
 export default router;

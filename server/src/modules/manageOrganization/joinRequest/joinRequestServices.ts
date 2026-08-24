@@ -305,7 +305,7 @@ export const getMyJoinRequest = async (organizationId: string,userId: string) =>
                 id: true,
                 status: true,
                 message: true,
-                createdAt: true,
+                requestedAt: true,
                 updatedAt: true,
                 reviewedAt: true,
 
@@ -325,4 +325,5 @@ export const getMyJoinRequest = async (organizationId: string,userId: string) =>
 
     return request;
 };
+
 
