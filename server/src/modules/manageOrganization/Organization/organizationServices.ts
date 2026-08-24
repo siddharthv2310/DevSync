@@ -1,9 +1,7 @@
 import { OrganizationRole } from "@prisma/client";
-import prisma from "../../config/prisma.js"
+import prisma from "../../../config/prisma.js";
 import { createOrganisationinput } from "./organizationvalidation.js";
-import { ApiErrors } from "../../common/errors/ApiErrors.js";
-import { organizationPermission } from "./organizationPermission.js";
-import { error } from "node:console";
+import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 
 

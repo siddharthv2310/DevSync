@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middlewares/authMiddleware.js";
+import { authMiddleware } from "../../../middlewares/authMiddleware.js";
 import { createOrganizationController, getOrganizationsController, getOrganizationInfo ,getOrganizationMembers,updateMemberRole,removeMember,leaveOrganization, transferOwnership } from "./organzationController.js";
-import { organizationMiddleware } from "../../middlewares/organizationMiddleware.js";
-import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
+import { organizationMiddleware } from "../../../middlewares/organizationMiddleware.js";
+import { requireOrganizationPermission } from "../../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "./organizationPermission.js";
 
 const router = Router();

@@ -1,8 +1,8 @@
 import { Router } from "express";
 import authRoutes from "../../modules/auth/index.js";
-import organizationRoutes from "../../modules/Organization/index.js"
-import invitationsRoute from "../../modules/Organization/invitation/index.js"
-import joinRequestRouter from "../../modules/Organization/joinRequest/index.js"
+import organizationRoutes from "../../modules/manageOrganization/Organization/index.js"
+import invitationsRoute from "../../modules/manageOrganization/invitation/index.js"
+import joinRequestRouter from "../../modules/manageOrganization/joinRequest/index.js"
 
 const router = Router(); 
 

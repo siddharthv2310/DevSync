@@ -1,7 +1,7 @@
 import {Request , Response ,NextFunction} from "express";
 import { createOrganizationSchema, organizationMembersQuerySchema, transferOwnershipSchema, updateMemberRoleSchema } from "./organizationvalidation.js";
 import * as organizationServices from "./organizationServices.js";
-import { ApiErrors } from "../../common/errors/ApiErrors.js";
+import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import { OrganizationRole } from "@prisma/client";
 
 export const createOrganizationController = async (req:Request , res:Response , next:NextFunction)=>{
