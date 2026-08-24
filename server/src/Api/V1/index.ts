@@ -10,6 +10,6 @@ router.use("/auth",authRoutes);
 router.use("/organization",organizationRoutes);
 router.use("/organizations/:organizationId/invitations",invitationsRoute);
 router.use("/invitations", invitationsRoute);
-router.use("/organization/:organizationId",joinRequestRouter);
+router.use("/organization/:organizationId/join-request",joinRequestRouter);
 
 export default router;

@@ -12,5 +12,4 @@ router.get("/", authMiddleware, organizationMiddleware, requireOrganizationPermi
 router.delete("/:invitationId", authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.CANCEL_INVITATION),cancelInvitation);
 router.post("/:token/accept", authMiddleware, acceptInvitation);
 
-
 export default router;
