@@ -4,7 +4,7 @@ import organizationRoutes from "../../modules/manageOrganization/Organization/in
 import invitationsRoute from "../../modules/manageOrganization/invitation/index.js"
 import joinRequestRouter from "../../modules/manageOrganization/joinRequest/index.js"
 import organizationSettingRouter from "../../modules/manageOrganization/organizationSettings/index.js"
-import organizationDiscoveryRouter from "../../modules/manageOrganization/OrganizationDiscovery/index.js"
+import organizationDiscoveryRouter from "../../modules/manageOrganization/organizationDiscovery/index.js"
 
 const router = Router(); 
 
