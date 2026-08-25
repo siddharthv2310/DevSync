@@ -121,6 +121,9 @@ model Organization {
   avatar      String?
   isActive    Boolean @default(true)
 
+  allowJoinRequests Boolean @default(false)
+  visibility OrganizationVisibility @default(PRIVATE)
+
   members OrganizationMember[]
   invitations OrganizationInvitation[]
   joinRequests OrganizationJoinRequest[]
@@ -230,4 +233,9 @@ enum joinRequestStatus{
   PENDING
   APPROVED
   REJECTED
+}
+
+enum OrganizationVisibility{
+  PRIVATE
+  PUBLIC
 }

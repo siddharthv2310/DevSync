@@ -7,8 +7,9 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.UPDATE_ORGANIZATION,
         organizationPermission.DELETE_ORGANIZATION,
         organizationPermission.TRANSFER_OWNERSHIP,
+        organizationPermission.UPDATE_ORGANIZATION_VISIBILITY,
 
-
+        
         organizationPermission.VIEW_MEMBERS,
         organizationPermission.INVITE_MEMBERS,
         organizationPermission.VIEW_INVITATIONS,
@@ -16,6 +17,8 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.VIEW_JOIN_REQUESTS,
         organizationPermission.APPROVE_JOIN_REQUEST,
         organizationPermission.REJECT_JOIN_REQUEST ,
+        organizationPermission.UPDATE_ORGANIZATION_SETTINGS,
+        organizationPermission.VIEW_ORGANIZATION_SETTINGS,
         organizationPermission.REMOVE_MEMBERS,
         organizationPermission.UPDATE_MEMBER_ROLE
     ],
@@ -23,6 +26,7 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.VIEW_ORGANIZATION,
         organizationPermission.UPDATE_ORGANIZATION,
 
+
         organizationPermission.VIEW_MEMBERS,
         organizationPermission.INVITE_MEMBERS,
         organizationPermission.VIEW_INVITATIONS,
@@ -30,6 +34,8 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.VIEW_JOIN_REQUESTS,
         organizationPermission.APPROVE_JOIN_REQUEST,
         organizationPermission.REJECT_JOIN_REQUEST ,
+        organizationPermission.UPDATE_ORGANIZATION_SETTINGS,
+        organizationPermission.VIEW_ORGANIZATION_SETTINGS,
         organizationPermission.REMOVE_MEMBERS,
         organizationPermission.UPDATE_MEMBER_ROLE
     ],
