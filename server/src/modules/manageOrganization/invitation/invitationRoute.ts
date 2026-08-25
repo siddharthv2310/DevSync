@@ -8,7 +8,7 @@ import { acceptInvitation, cancelInvitation, createInvitation, getOrganizationIn
 const router = Router({ mergeParams: true }); // this is to handle the organizationId parameter that is the parent route 
 
 router.post("/", authMiddleware, organizationMiddleware, requireOrganizationPermission(organizationPermission.INVITE_MEMBERS), createInvitation);
-router.get("/", authMiddleware, organizationMiddleware, requireOrganizationPermission(organizationPermission.INVITE_MEMBERS), getOrganizationInvitations);
+router.get("/", authMiddleware, organizationMiddleware, requireOrganizationPermission(organizationPermission.VIEW_INVITATIONS), getOrganizationInvitations);
 router.delete("/:invitationId", authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.CANCEL_INVITATION),cancelInvitation);
 router.post("/:token/accept", authMiddleware, acceptInvitation);
 
