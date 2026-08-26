@@ -18,6 +18,6 @@ router.use("/organization/:organizationId/join-request",joinRequestRouter);
 router.use("/organizations/:organizationId/settings",organizationSettingRouter);
 router.use("/organizations/discover",organizationDiscoveryRouter);
 router.use("/organizations/:organizationId/projects",projectRouter);
-Router.arguments("/organizations/:organizationId/teams",teamRouter);
+router.use("/organizations/:organizationId/teams",teamRouter);
 
 export default router;
