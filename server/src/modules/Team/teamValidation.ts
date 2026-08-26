@@ -34,4 +34,31 @@ export const createTeamSchema = z.object({
         .or(z.literal(""))
 });
 
+export const getTeamsQuerySchema = z.object({
+    page: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .default(1),
+
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(50)
+        .default(20),
+
+    search: z
+        .string()
+        .trim()
+        .max(100)
+        .optional(),
+
+    includeInactive: z.coerce
+        .boolean()
+        .default(false)
+});
+
+
 export type CreateTeamInput = z.infer< typeof createTeamSchema >;
+export type GetTeamsQuery = z.infer<typeof getTeamsQuerySchema>;

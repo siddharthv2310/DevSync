@@ -1,5 +1,5 @@
 import prisma from "../../config/prisma.js";
-import Prisma, { TeamRole } from "@prisma/client";
+import {Prisma,TeamRole } from "@prisma/client";
 import { CreateTeamInput } from "./teamValidation.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
@@ -70,3 +70,84 @@ export const createTeam = async (organizationId: string, userId: string, data: C
        throw new ApiErrors(  409,"A team with this slug already exists in this organization")
     }
 }
+
+export const getOrganizationTeams = async (organizationId: string,page: number,limit: number,search?: string,includeInactive = false) => {
+
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.TeamWhereInput = {
+        organizationId,
+
+        ...(includeInactive
+            ? {}
+            : {
+                isActive: true
+            }),
+
+        ...(search
+            ? {
+                OR: [
+                    {
+                        name: {
+                            contains: search,
+                            mode: "insensitive"
+                        }
+                    },
+                    {
+                        slug: {
+                            contains: search,
+                            mode: "insensitive"
+                        }
+                    }
+                ]
+            }
+            : {})
+    };
+
+    const [teams, total] = await prisma.$transaction([
+        prisma.team.findMany({
+            where,
+            skip,
+            take: limit,
+
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                description: true,
+                avatar: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+
+                _count: {
+                    select: {
+                        members: true
+                    }
+                }
+            },
+
+            orderBy: {
+                createdAt: "desc"
+            }
+        }),
+
+        prisma.team.count({
+            where
+        })
+    ]);
+
+    return {
+        teams: teams.map(team => ({
+            ...team,
+            memberCount: team._count.members
+        })),
+
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
+};
