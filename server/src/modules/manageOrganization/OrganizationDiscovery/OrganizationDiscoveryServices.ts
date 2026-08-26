@@ -1,5 +1,4 @@
 import {OrganizationVisibility,Prisma} from "@prisma/client";
-
 import prisma from "../../../config/prisma.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 

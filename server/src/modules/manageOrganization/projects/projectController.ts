@@ -1,6 +1,6 @@
 import {Request,Response ,NextFunction} from "express";
 import * as projectServices from "./projectServices.js";
-import { createProjectSchema } from "./projectValidator.js";
+import { createProjectSchema, getProjectsQuerySchema } from "./projectValidator.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 export const createProjectController = async(req:Request , res:Response)=>{
@@ -23,3 +23,21 @@ return res.status(201).json({
 });
 
 };
+
+export const getOrganizationProjectsController = async(res:Response , req:Request)=>{
+    const result = getProjectsQuerySchema.safeParse(req.query);
+    if(!result.success){
+        throw new ApiErrors(400 , "Invalid project query parameters");
+    }
+
+    const organizationId = req.params.organizationId as string;
+
+    const resultData = await projectServices.getOrganizationProjects(organizationId , result.data.page , result.data.limit ,result.data.search , result.data.includeArchived);
+
+    return res.status(200).json({
+        success:true,
+        message:"Projects fetched successfully",
+        data:resultData.projects,
+        pagination:resultData.pagination,
+    })
+}
