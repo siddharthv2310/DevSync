@@ -87,6 +87,7 @@ model User {
   joinRequests OrganizationJoinRequest[] 
   reviewedJoinRequest OrganizationJoinRequest[] @relation("JoinRequestReviewer")
 
+  projectMemberships ProjectMember[]
   oauthAccounts OAuthAccount[]
 
   createdAt DateTime @default(now())
@@ -127,6 +128,7 @@ model Organization {
   members OrganizationMember[]
   invitations OrganizationInvitation[]
   joinRequests OrganizationJoinRequest[]
+  projects  Project[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -211,6 +213,49 @@ model OrganizationJoinRequest{
 
 }
 
+model Project {
+  id String @id @default(uuid())
+
+  organizationId String
+  organization Organization @relation( fields :[organizationId] , references:[id] , onDelete:Cascade)
+
+  name String
+  slug String 
+  description String?
+  avatar String?
+
+  isArchieved Boolean @default(false)
+
+  members ProjectMember[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId , slug])
+  @@index([organizationId])
+}
+
+model ProjectMember{
+  id String @id @default(uuid())
+
+  projectId String
+  project Project @relation( fields : [projectId] , references:[id] , onDelete:Cascade)
+
+  userId String
+  user User @relation(fields:[userId] , references:[id] , onDelete:Cascade)
+
+  role projectRole
+
+  joinedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique ([projectId,userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
 
 
 enum AuthProvider{
@@ -238,4 +283,11 @@ enum joinRequestStatus{
 enum OrganizationVisibility{
   PRIVATE
   PUBLIC
+}
+
+enum projectRole{
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
 }
