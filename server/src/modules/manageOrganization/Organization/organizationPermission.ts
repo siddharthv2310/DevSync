@@ -31,4 +31,7 @@ export enum organizationPermission{
     ARCHIEVE_PROJECT = "projects:archieve",
     DELETE_PROJECT = "projects:delete",
 
+    CREATE_TEAM = "teams:create",
+    VIEW_TEAMS = "teams:view"
+
 }

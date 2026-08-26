@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as projectServices from "./projectServices.js";
 import { createProjectSchema, getProjectsQuerySchema } from "./projectValidator.js";
-import { ApiErrors } from "../../../common/errors/ApiErrors.js";
+import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
 export const createProjectController = async (req: Request, res: Response) => {
     const result = createProjectSchema.safeParse(req.body);

@@ -89,6 +89,7 @@ model User {
 
   projectMemberships ProjectMember[]
   oauthAccounts OAuthAccount[]
+  teamMemberships TeamMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -129,6 +130,7 @@ model Organization {
   invitations OrganizationInvitation[]
   joinRequests OrganizationJoinRequest[]
   projects  Project[]
+  teams Team[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -256,6 +258,49 @@ model ProjectMember{
   @@index([userId])
 }
 
+model Team{
+  id String @id @default(uuid())
+
+  organizationId String
+  organization Organization @relation(fields : [organizationId] , references:[id],onDelete:Cascade)
+
+  name String
+  slug String 
+  description String?
+  avatar String?
+
+  isActive Boolean @default(true)
+
+  members TeamMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId , slug])
+  @@index([organizationId])
+}
+
+model TeamMember {
+    id String @id @default(uuid())
+
+    teamId String
+    team Team @relation(fields: [teamId],references: [id],onDelete: Cascade)
+
+    userId String
+    user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+
+    role TeamRole
+
+    joinedAt DateTime @default(now())
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([teamId, userId])
+    @@index([teamId])
+    @@index([userId])
+}
+
 
 
 enum AuthProvider{
@@ -290,4 +335,10 @@ enum projectRole{
   ADMIN
   MEMBER
   VIEWER
+}
+
+enum TeamRole{
+  OWNER
+  ADMIN
+  MEMBER
 }

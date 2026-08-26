@@ -31,6 +31,9 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.ARCHIEVE_PROJECT,
         organizationPermission.DELETE_PROJECT,
 
+        organizationPermission.CREATE_TEAM,
+        organizationPermission.VIEW_TEAMS,
+
     ],
     [OrganizationRole.ADMIN]:[
         organizationPermission.VIEW_ORGANIZATION,
@@ -55,6 +58,9 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.VIEW_PROJECT,
         organizationPermission.UPDATE_PROJECT,
         organizationPermission.ARCHIEVE_PROJECT,
+
+        organizationPermission.CREATE_TEAM,
+        organizationPermission.VIEW_TEAMS,
         
     ],
 
@@ -64,6 +70,8 @@ export const rolePermissions: Record<OrganizationRole,organizationPermission[]> 
         organizationPermission.VIEW_MEMBERS,
 
         organizationPermission.VIEW_PROJECT,
+
+        organizationPermission.VIEW_TEAMS,
     ]
 
 

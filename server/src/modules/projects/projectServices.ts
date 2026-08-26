@@ -1,7 +1,7 @@
 import { projectRole, Prisma } from "@prisma/client";
-import prisma from "../../../config/prisma.js";
+import prisma from "../../config/prisma.js";
 import { CreateProjectInput } from "./projectValidator.js";
-import { ApiErrors } from "../../../common/errors/ApiErrors.js";
+import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
 
 export const createProject = async (organizationId: string, userId: string, projectData: CreateProjectInput) => {

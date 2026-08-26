@@ -5,7 +5,8 @@ import invitationsRoute from "../../modules/manageOrganization/invitation/index.
 import joinRequestRouter from "../../modules/manageOrganization/joinRequest/index.js"
 import organizationSettingRouter from "../../modules/manageOrganization/organizationSettings/index.js"
 import organizationDiscoveryRouter from "../../modules/manageOrganization/organizationDiscovery/index.js"
-import projectRouter from "../../modules/manageOrganization/projects/index.js";
+import projectRouter from "../../modules/projects/index.js";
+import teamRouter from "../../modules/Team/index.js"
 
 const router = Router(); 
 
@@ -17,5 +18,6 @@ router.use("/organization/:organizationId/join-request",joinRequestRouter);
 router.use("/organizations/:organizationId/settings",organizationSettingRouter);
 router.use("/organizations/discover",organizationDiscoveryRouter);
 router.use("/organizations/:organizationId/projects",projectRouter);
+Router.arguments("/organizations/:organizationId/teams",teamRouter);
 
 export default router;
