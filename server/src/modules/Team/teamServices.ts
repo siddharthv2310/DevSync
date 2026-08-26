@@ -151,3 +151,40 @@ export const getOrganizationTeams = async (organizationId: string,page: number,l
         }
     };
 };
+
+
+export const getTeamDetails = async (teamId: string) => {
+
+    const team = await prisma.team.findUnique({
+        where: {
+            id: teamId
+        },
+
+        select: {
+            id: true,
+            organizationId: true,
+            name: true,
+            slug: true,
+            description: true,
+            avatar: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+
+            _count: {
+                select: {
+                    members: true
+                }
+            }
+        }
+    });
+
+    if (!team) {
+        throw new ApiErrors(404,"Team not found");
+    }
+
+    return {
+        ...team,
+        memberCount: team._count.members
+    };
+};

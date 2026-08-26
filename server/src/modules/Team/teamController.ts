@@ -72,3 +72,27 @@ export const getOrganizationTeamsController = async (req: Request,res: Response,
         next(error);
     }
 };
+
+export const getTeamDetailsController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const teamId = req.params.teamId as string;
+
+        if (!teamId) {
+            throw new ApiErrors(400, "Team ID is required");
+        }
+
+        const team = await teamService.getTeamDetails( teamId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team fetched successfully",
+            data: team
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};
