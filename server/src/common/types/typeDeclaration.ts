@@ -1,4 +1,4 @@
-import { OrganizationRole } from "@prisma/client";
+import { OrganizationRole, Project, projectRole } from "@prisma/client";
 
 declare global {
     namespace Express {
@@ -24,6 +24,13 @@ declare global {
                 role: OrganizationRole;
                 joinedAt: Date;
             };
+
+            project?: Project;
+
+            projectMember ?: {
+                id:String,
+                role:projectRole,
+            } | null;
         }
     }
 }
