@@ -1,32 +1,32 @@
-import { projectRole ,Prisma} from "@prisma/client";
+import { projectRole, Prisma } from "@prisma/client";
 import prisma from "../../../config/prisma.js";
 import { CreateProjectInput } from "./projectValidator.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 
-export const createProject = async(organizationId:string , userId:string , projectData:CreateProjectInput)=>{
+export const createProject = async (organizationId: string, userId: string, projectData: CreateProjectInput) => {
 
     const existingProject = await prisma.project.findUnique({
-        where:{
-            organizationId_slug:{
+        where: {
+            organizationId_slug: {
                 organizationId,
-                slug:projectData.slug,
+                slug: projectData.slug,
             },
         },
     });
 
-    if(existingProject){
-        throw new ApiErrors(409 ,  "A project with this slug already exists in this organization");
+    if (existingProject) {
+        throw new ApiErrors(409, "A project with this slug already exists in this organization");
     }
 
-    const project = await prisma.$transaction(async(tx)=>{
+    const project = await prisma.$transaction(async (tx) => {
         const newProject = await tx.project.create({
-            data:{
+            data: {
                 organizationId,
-                name:projectData.name,
-                slug:projectData.slug,
-                description:projectData.description ?? null,
-                avatar:projectData.avatar ?? null,
+                name: projectData.name,
+                slug: projectData.slug,
+                description: projectData.description ?? null,
+                avatar: projectData.avatar ?? null,
             },
         });
 
@@ -44,48 +44,48 @@ export const createProject = async(organizationId:string , userId:string , proje
     return project;
 }
 
-export const getOrganizationProjects = async(organizationId:string , page:number , limit:number , search?:string , includeArchieved:boolean=false)=>{
-    const skip = (page-1)*limit;
+export const getOrganizationProjects = async (organizationId: string, page: number, limit: number, search?: string, includeArchieved: boolean = false) => {
+    const skip = (page - 1) * limit;
 
-    const where : Prisma.ProjectWhereInput = {
+    const where: Prisma.ProjectWhereInput = {
         organizationId,
 
-        ...(includeArchieved 
+        ...(includeArchieved
             ? {}
-            :{
-            isArchieved : false,
+            : {
+                isArchieved: false,
             }),
 
         ...(search
-            ?{
-                or:[
+            ? {
+                or: [
                     {
-                        name:{
-                            contain:search,
-                            mode:"insensitive",
+                        name: {
+                            contain: search,
+                            mode: "insensitive",
                         }
                     },
                     {
-                        slug:{
-                            contain:search,
-                            mode:"insensitive",
+                        slug: {
+                            contain: search,
+                            mode: "insensitive",
                         }
                     }
                 ]
-                
+
             }
-            
-            :{}
-        )    
+
+            : {}
+        )
     };
 
-    const [projects , total] = await prisma.$transaction([
+    const [projects, total] = await prisma.$transaction([
         prisma.project.findMany({
             where,
             skip,
-            take:limit,
+            take: limit,
 
-            select:{
+            select: {
                 id: true,
                 name: true,
                 slug: true,
@@ -95,15 +95,15 @@ export const getOrganizationProjects = async(organizationId:string , page:number
                 createdAt: true,
                 updatedAt: true,
 
-                _count:{
-                    select:{
-                        members:true,
+                _count: {
+                    select: {
+                        members: true,
                     }
                 }
             },
 
-            orderBy:{
-                createdAt:"desc"
+            orderBy: {
+                createdAt: "desc"
             },
         }),
 
@@ -113,9 +113,9 @@ export const getOrganizationProjects = async(organizationId:string , page:number
     ]);
 
     return {
-        projects: projects.map((project)=>({
+        projects: projects.map((project) => ({
             ...project,
-            memberCount : project._count.members
+            memberCount: project._count.members
         })),
         pagination: {
             page,
@@ -123,5 +123,45 @@ export const getOrganizationProjects = async(organizationId:string , page:number
             total,
             totalPages: Math.ceil(total / limit)
         },
+    };
+};
+
+export const getProjectDetails = async (projectId: string) => {
+
+    const project =
+        await prisma.project.findUnique({
+            where: {
+                id: projectId
+            },
+
+            select: {
+                id: true,
+                organizationId: true,
+                name: true,
+                slug: true,
+                description: true,
+                avatar: true,
+                isArchived: true,
+                createdAt: true,
+                updatedAt: true,
+
+                _count: {
+                    select: {
+                        members: true
+                    }
+                }
+            }
+        });
+
+    if (!project) {
+        throw new ApiErrors(
+            404,
+            "Project not found"
+        );
+    }
+
+    return {
+        ...project,
+        memberCount: project._count.members
     };
 };
