@@ -7,11 +7,7 @@ interface ResetTokenPayload extends JwtPayload {
   purpose: string;
 }
 
-export const resetPasswordMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const resetPasswordMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
 

@@ -1,5 +1,5 @@
 import {Request, Response , NextFunction} from "express";
-import { createTeamSchema, getTeamsQuerySchema} from "./teamValidation.js";
+import { createTeamSchema, getTeamMembersQuerySchema, getTeamsQuerySchema} from "./teamValidation.js";
 import * as teamService from "./teamServices.js";
 import { ApiErrors} from "../../common/errors/ApiErrors.js";
 
@@ -89,6 +89,39 @@ export const getTeamDetailsController = async (req: Request,res: Response,next: 
             success: true,
             message: "Team fetched successfully",
             data: team
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};
+
+export const getTeamMembersController = async ( req: Request, res: Response, next: NextFunction ) => {
+
+    try {
+
+        const result = getTeamMembersQuerySchema.safeParse( req.query );
+
+        if (!result.success) {
+            throw new ApiErrors( 400, "Invalid team member query parameters");
+        }
+
+        const teamId = req.params.teamId as string;
+
+        if (!teamId) {
+            throw new ApiErrors( 400, "Team ID is required");
+        }
+
+        const { page, limit, search } = result.data;
+
+        const data = await teamService.getTeamMembers( teamId, page, limit, search );
+
+        return res.status(200).json({
+            success: true,
+            message: "Team members fetched successfully",
+            data: data.members,
+            pagination: data.pagination
         });
 
     } 

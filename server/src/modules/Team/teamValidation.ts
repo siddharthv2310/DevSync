@@ -1,3 +1,4 @@
+import { TeamRole } from "@prisma/client";
 import { z } from "zod";
 
 export const createTeamSchema = z.object({
@@ -59,6 +60,43 @@ export const getTeamsQuerySchema = z.object({
         .default(false)
 });
 
+export const getTeamMembersQuerySchema = z.object({
+
+    page: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .default(1),
+
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(50)
+        .default(20),
+
+    search: z
+        .string()
+        .trim()
+        .max(100)
+        .optional()
+});
+
+export const addTeamMemberSchema = z.object({
+
+    userId: z
+        .string()
+        .uuid("Invalid user ID"),
+
+    role: z
+        .nativeEnum(TeamRole)
+        .default(TeamRole.MEMBER)
+});
+
+
+
 
 export type CreateTeamInput = z.infer< typeof createTeamSchema >;
 export type GetTeamsQuery = z.infer<typeof getTeamsQuerySchema>;
+export type GetTeamMembersQuery = z.infer< typeof getTeamMembersQuerySchema>;
+export type AddTeamMemberInput = z.infer< typeof addTeamMemberSchema >;
