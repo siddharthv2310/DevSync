@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { addTeamMemberSchema, createTeamSchema, getTeamMembersQuerySchema, getTeamsQuerySchema, updateTeamMemberRoleSchema } from "./teamValidation.js";
+import { addTeamMemberSchema, createTeamSchema, getTeamMembersQuerySchema, getTeamsQuerySchema, transferTeamOwnershipSchema, updateTeamMemberRoleSchema } from "./teamValidation.js";
 import * as teamService from "./teamServices.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
@@ -288,6 +288,45 @@ export const leaveTeamController = async (req: Request,res: Response,next: NextF
         return res.status(200).json({
             success: true,
             message: "You have left the team successfully"
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};
+
+export const transferTeamOwnershipController = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
+    try {
+
+        const result = transferTeamOwnershipSchema.safeParse( req.body);
+
+        if (!result.success) {
+            throw new ApiErrors(400,"Invalid ownership transfer data");
+        }
+
+        const teamId =req.params.teamId as string;
+
+        const currentOwnerId =req.user?.userId;
+
+        if (!teamId) {
+            throw new ApiErrors( 400,"Team ID is required");
+        }
+
+        if (!currentOwnerId) {
+            throw new ApiErrors(401,"Authentication required");
+        }
+
+        await teamService.transferTeamOwnership(teamId,currentOwnerId,result.data.newOwnerId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team ownership transferred successfully"
         });
 
     } 

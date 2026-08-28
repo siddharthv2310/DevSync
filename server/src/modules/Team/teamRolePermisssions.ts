@@ -7,6 +7,7 @@ export const teamRolePermissions: Record<TeamRole, teamPermission[] > = {
         teamPermission.UPDATE_TEAM,
         teamPermission.ARCHIVE_TEAM,
         teamPermission.DELETE_TEAM,
+        teamPermission.TRANSFER_OWNERSHIP,
 
         teamPermission.VIEW_MEMBERS,
         teamPermission.ADD_MEMBERS,

@@ -654,3 +654,78 @@ export const leaveTeam = async (teamId: string, userId: string) => {
         }
     });
 };
+
+
+
+export const transferTeamOwnership = async (teamId: string,currentOwnerId: string,newOwnerId: string) => {
+
+    if (currentOwnerId === newOwnerId) {
+        throw new ApiErrors(400,"You cannot transfer ownership to yourself");
+    }
+
+    const [currentOwner, newOwner] = await Promise.all([
+
+            prisma.teamMember.findUnique({
+                where: {
+                    teamId_userId: {
+                        teamId,
+                        userId: currentOwnerId
+                    }
+                },
+                select: {
+                    id: true,
+                    role: true
+                }
+            }),
+
+            prisma.teamMember.findUnique({
+                where: {
+                    teamId_userId: {
+                        teamId,
+                        userId: newOwnerId
+                    }
+                },
+                select: {
+                    id: true,
+                    role: true
+                }
+            })
+        ]);
+
+    if (!currentOwner) {
+        throw new ApiErrors(403,"Team membership required");
+    }
+
+    if (currentOwner.role !== TeamRole.OWNER) {
+        throw new ApiErrors( 403,"Only the team owner can transfer ownership");
+    }
+
+    if (!newOwner) {
+        throw new ApiErrors(404,"The new owner must be a member of this team");
+    }
+
+    if (newOwner.role === TeamRole.OWNER) {
+        throw new ApiErrors(400,"This user is already the team owner");
+    }
+
+    await prisma.$transaction(async (tx) => {
+
+        await tx.teamMember.update({
+            where: {
+                id: currentOwner.id
+            },
+            data: {
+                role: TeamRole.ADMIN
+            }
+        });
+
+        await tx.teamMember.update({
+            where: {
+                id: newOwner.id
+            },
+            data: {
+                role: TeamRole.OWNER
+            }
+        });
+    });
+};

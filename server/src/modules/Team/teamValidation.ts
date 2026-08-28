@@ -100,7 +100,11 @@ export const updateTeamMemberRoleSchema = z.object({
     ])
 });
 
-
+export const transferTeamOwnershipSchema = z.object({
+    newOwnerId: z
+        .string()
+        .uuid("Invalid new owner ID")
+});
 
 
 
@@ -110,3 +114,5 @@ export type GetTeamsQuery = z.infer<typeof getTeamsQuerySchema>;
 export type GetTeamMembersQuery = z.infer< typeof getTeamMembersQuerySchema>;
 export type AddTeamMemberInput = z.infer< typeof addTeamMemberSchema >;
 export type UpdateTeamMemberRoleInput = z.infer< typeof updateTeamMemberRoleSchema>;
+export type TransferTeamOwnershipInput = z.infer<typeof transferTeamOwnershipSchema>;
+
