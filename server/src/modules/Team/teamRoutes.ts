@@ -3,7 +3,7 @@ import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { organizationMiddleware } from "../../middlewares/organizationMiddleware.js";
 import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "../manageOrganization/Organization/organizationPermission.js";
-import { addTeamMemberController, createTeamController, getOrganizationTeamsController, getTeamDetailsController, getTeamMembersController, leaveTeamController, removeTeamMemberController, transferTeamOwnershipController, updateTeamController, updateTeamMemberRoleController } from "./teamController.js";
+import { addTeamMemberController, archiveTeamController, createTeamController, getOrganizationTeamsController, getTeamDetailsController, getTeamMembersController, leaveTeamController, removeTeamMemberController, transferTeamOwnershipController, updateTeamController, updateTeamMemberRoleController } from "./teamController.js";
 import { teamMiddleware } from "../../middlewares/teamMiddleware.js";
 import { teamPermission } from "./teamPermissions.js";
 import { requireTeamPermission } from "../../middlewares/teamPermissionMiddleWare.js";
@@ -20,5 +20,6 @@ router.delete("/:teamId/members/:userId",authMiddleware,organizationMiddleware,t
 router.delete("/:teamId/membership",authMiddleware,organizationMiddleware,teamMiddleware,leaveTeamController);
 router.patch("/:teamId/ownership",authMiddleware,organizationMiddleware,teamMiddleware,transferTeamOwnershipController);
 router.patch("/:teamId",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.UPDATE_TEAM),updateTeamController);
+router.patch("/:teamId/archive",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.ARCHIVE_TEAM),archiveTeamController);
 
 export default router;

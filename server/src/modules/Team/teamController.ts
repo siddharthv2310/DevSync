@@ -377,3 +377,34 @@ export const updateTeamController = async (req: Request,res: Response,next: Next
         next(error);
     }
 };
+
+export const archiveTeamController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const organizationId =req.params.organizationId as string;
+
+        const teamId =req.params.teamId as string;
+
+        if (!organizationId) {
+            throw new ApiErrors(400,"Organization ID is required");
+        }
+
+        if (!teamId) {
+            throw new ApiErrors(400,"Team ID is required");
+        }
+
+        const team =
+            await teamService.archiveTeam(organizationId,teamId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team archived successfully",
+            data: team
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};

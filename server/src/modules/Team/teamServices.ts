@@ -826,3 +826,46 @@ export const updateTeam = async (organizationId: string,teamId: string,data: Upd
         throw error;
     }
 };
+
+export const archiveTeam = async (organizationId: string,teamId: string) => {
+
+    const team = await prisma.team.findFirst({
+        where: {
+            id: teamId,
+            organizationId
+        },
+
+        select: {
+            id: true,
+            isActive: true
+        }
+    });
+
+    if (!team) {
+        throw new ApiErrors(404,"Team not found");
+    }
+
+    if (!team.isActive) {
+        throw new ApiErrors(409,"Team is already archived");
+    }
+
+    const archivedTeam = await prisma.team.update({
+            where: {
+                id: team.id
+            },
+
+            data: {
+                isActive: false
+            },
+
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                isActive: true,
+                updatedAt: true
+            }
+        });
+
+    return archivedTeam;
+};

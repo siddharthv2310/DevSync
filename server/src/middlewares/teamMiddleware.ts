@@ -34,6 +34,7 @@ export const teamMiddleware = async (req: Request, res: Response, next: NextFunc
             where: {
                 id: teamId,
                 organizationId,
+                isActive: true
             }
         });
 
