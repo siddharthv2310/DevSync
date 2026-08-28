@@ -1,5 +1,5 @@
 import prisma from "../../config/prisma.js";
-import { Prisma, TeamRole } from "@prisma/client";
+import { OrganizationRole, Prisma, TeamRole } from "@prisma/client";
 import { CreateTeamInput } from "./teamValidation.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
@@ -348,9 +348,187 @@ export const addTeamMember = async (organizationId: string, teamId: string, user
         if (error instanceof Prisma.PrismaClientKnownRequestError ) {
 
             if (error.code === "P2002") {
-                
+
                 throw new ApiErrors( 409, "User is already a member of this team");
             }
+        }
+
+        throw error;
+    }
+};
+
+
+export const updateTeamMemberRole = async ( organizationId: string, teamId: string,
+    actorUserId: string,
+    targetUserId: string,
+    newRole: TeamRole,
+    organizationRole: OrganizationRole
+) => {
+
+    if (actorUserId === targetUserId) {
+        throw new ApiErrors(
+            400,
+            "You cannot change your own team role"
+        );
+    }
+
+    if (newRole === TeamRole.OWNER) {
+        throw new ApiErrors(
+            400,
+            "Team ownership cannot be assigned through this operation"
+        );
+    }
+
+
+    const isOrganizationManager =
+        organizationRole === OrganizationRole.OWNER ||
+        organizationRole === OrganizationRole.ADMIN;
+
+   
+    const targetMembership =
+        await prisma.teamMember.findUnique({
+            where: {
+                teamId_userId: {
+                    teamId,
+                    userId: targetUserId
+                }
+            },
+
+            select: {
+                id: true,
+                role: true
+            }
+        });
+
+    if (!targetMembership) {
+        throw new ApiErrors(
+            404,
+            "Team member not found"
+        );
+    }
+
+   
+    if (isOrganizationManager) {
+
+        
+        if (
+            organizationRole === OrganizationRole.ADMIN &&
+            targetMembership.role === TeamRole.OWNER
+        ) {
+            throw new ApiErrors(
+                403,
+                "The team owner cannot be modified"
+            );
+        }
+
+       
+        if (
+            organizationRole === OrganizationRole.ADMIN &&
+            targetMembership.role === TeamRole.ADMIN
+        ) {
+            throw new ApiErrors(
+                403,
+                "Organization admins cannot modify team admins"
+            );
+        }
+
+    } else {
+
+        const actorMembership =
+            await prisma.teamMember.findUnique({
+                where: {
+                    teamId_userId: {
+                        teamId,
+                        userId: actorUserId
+                    }
+                },
+
+                select: {
+                    role: true
+                }
+            });
+
+        if (!actorMembership) {
+            throw new ApiErrors(
+                403,
+                "Team membership required"
+            );
+        }
+
+        
+        if (
+            targetMembership.role === TeamRole.OWNER
+        ) {
+            throw new ApiErrors(
+                403,
+                "The team owner cannot be modified"
+            );
+        }
+
+        
+        if (
+            actorMembership.role === TeamRole.MEMBER
+        ) {
+            throw new ApiErrors(
+                403,
+                "Team members cannot change member roles"
+            );
+        }
+
+       
+        if (
+            actorMembership.role === TeamRole.ADMIN &&
+            targetMembership.role === TeamRole.ADMIN
+        ) {
+            throw new ApiErrors(
+                403,
+                "Team admins cannot modify another admin"
+            );
+        }
+    }
+
+    try {
+
+        const updatedMembership =
+            await prisma.teamMember.update({
+
+                where: {
+                    id: targetMembership.id
+                },
+
+                data: {
+                    role: newRole
+                },
+
+                select: {
+                    id: true,
+                    role: true,
+                    joinedAt: true,
+
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            username: true,
+                            email: true,
+                            avatar: true
+                        }
+                    }
+                }
+            });
+
+        return updatedMembership;
+
+    } catch (error) {
+
+        if (
+            error instanceof
+            Prisma.PrismaClientKnownRequestError
+        ) {
+            throw new ApiErrors(
+                500,
+                "Failed to update team member role"
+            );
         }
 
         throw error;

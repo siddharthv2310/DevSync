@@ -3,7 +3,7 @@ import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { organizationMiddleware } from "../../middlewares/organizationMiddleware.js";
 import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "../manageOrganization/Organization/organizationPermission.js";
-import { createTeamController, getOrganizationTeamsController, getTeamDetailsController, getTeamMembersController } from "./teamController.js";
+import { addTeamMemberController, createTeamController, getOrganizationTeamsController, getTeamDetailsController, getTeamMembersController, updateTeamMemberRoleController } from "./teamController.js";
 import { teamMiddleware } from "../../middlewares/teamMiddleware.js";
 import { teamPermission } from "./teamPermissions.js";
 import { requireTeamPermission } from "../../middlewares/teamPermissionMiddleWare.js";
@@ -14,5 +14,7 @@ router.post("/", authMiddleware , organizationMiddleware , requireOrganizationPe
 router.get("/",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.VIEW_TEAMS),getOrganizationTeamsController);
 router.get("/:teamId",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.VIEW_TEAMS),teamMiddleware,getTeamDetailsController);
 router.get( "/:teamId/members",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.VIEW_MEMBERS), getTeamMembersController);
+router.use("/:teamId/embers",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.ADD_MEMBERS),addTeamMemberController);
+router.patch("/:teamId/members/:userId/role",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.UPDATE_MEMBER_ROLE),updateTeamMemberRoleController);
 
 export default router;

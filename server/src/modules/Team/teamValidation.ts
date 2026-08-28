@@ -93,6 +93,15 @@ export const addTeamMemberSchema = z.object({
         .default(TeamRole.MEMBER)
 });
 
+export const updateTeamMemberRoleSchema = z.object({
+    role: z.enum([
+        TeamRole.ADMIN,
+        TeamRole.MEMBER
+    ])
+});
+
+
+
 
 
 
@@ -100,3 +109,4 @@ export type CreateTeamInput = z.infer< typeof createTeamSchema >;
 export type GetTeamsQuery = z.infer<typeof getTeamsQuerySchema>;
 export type GetTeamMembersQuery = z.infer< typeof getTeamMembersQuerySchema>;
 export type AddTeamMemberInput = z.infer< typeof addTeamMemberSchema >;
+export type UpdateTeamMemberRoleInput = z.infer< typeof updateTeamMemberRoleSchema>;
