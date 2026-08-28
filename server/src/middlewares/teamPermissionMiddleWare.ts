@@ -21,6 +21,17 @@ export const requireTeamPermission = (permission: teamPermission) => {
                 throw new ApiErrors( 403, "Organization membership required" );
             }
 
+            // only owner can permanentally deleting the team 
+            
+            if ( permission === teamPermission.DELETE_TEAM) {
+            
+                if (organizationMember.role !==OrganizationRole.OWNER) {
+                    throw new ApiErrors(403,"Only the organization owner can delete a team");
+                }
+            
+                return next();
+            }
+
 
             const isOrganizationManager = organizationMember.role ===  OrganizationRole.OWNER || organizationMember.role === OrganizationRole.ADMIN;
 

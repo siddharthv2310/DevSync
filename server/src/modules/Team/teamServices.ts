@@ -869,3 +869,80 @@ export const archiveTeam = async (organizationId: string,teamId: string) => {
 
     return archivedTeam;
 };
+
+export const restoreTeam = async (organizationId: string,teamId: string) => {
+
+    const team = await prisma.team.findFirst({
+        where: {
+            id: teamId,
+            organizationId,
+        },
+        select: {
+            id: true,
+            isActive: true,
+        },
+    });
+
+    if (!team) {
+        throw new ApiErrors(404,"Team not found");
+    }
+
+    if (team.isActive) {
+        throw new ApiErrors(409,"Team is already active");
+    }
+
+    const restoredTeam = await prisma.team.update({
+        where: {
+            id: team.id,
+        },
+        data: {
+            isActive: true,
+        },
+        select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            avatar: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+
+    return restoredTeam;
+};
+
+export const deleteTeam = async ( organizationId: string, teamId: string) => {
+
+    const team = await prisma.team.findFirst({
+        where: {
+            id: teamId,
+            organizationId,
+        },
+        select: {
+            id: true,
+            isActive: true,
+        },
+    });
+
+    if (!team) {
+        throw new ApiErrors(
+            404,
+            "Team not found"
+        );
+    }
+
+    if (team.isActive) {
+        throw new ApiErrors(
+            409,
+            "Team must be archived before it can be deleted"
+        );
+    }
+
+    await prisma.team.delete({
+        where: {
+            id: team.id,
+        },
+    });
+};

@@ -51,7 +51,6 @@ export const teamMiddleware = async (req: Request, res: Response, next: NextFunc
             }
         });
 
-
         const isOrgnizationManager = organizationMember.role === OrganizationRole.ADMIN || organizationMember.role === OrganizationRole.OWNER;
 
         if (!teamMember && !isOrgnizationManager) {

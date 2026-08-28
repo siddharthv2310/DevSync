@@ -408,3 +408,61 @@ export const archiveTeamController = async (req: Request,res: Response,next: Nex
         next(error);
     }
 };
+
+export const restoreTeamController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const organizationId = req.params.organizationId as string;
+
+        const teamId = req.params.teamId as string;
+
+        if (!organizationId) {
+            throw new ApiErrors(400,"Organization ID is required");
+        }
+
+        if (!teamId) {
+            throw new ApiErrors(400,"Team ID is required");
+        }
+
+        const team = await teamService.restoreTeam(organizationId,teamId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team restored successfully",
+            data: team,
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};
+
+export const deleteTeamController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const organizationId =req.params.organizationId as string; 
+
+        const teamId = req.params.teamId as string;
+
+        if (!organizationId) {
+            throw new ApiErrors(400,"Organization ID is required");
+        }
+
+        if (!teamId) {
+            throw new ApiErrors(400,"Team ID is required");
+        }
+
+        await teamService.deleteTeam(organizationId,teamId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team deleted successfully"
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};

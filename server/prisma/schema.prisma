@@ -12,140 +12,120 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-
-
-model PasswordResetOtp{
-  id       String @id @default(uuid())
-  userId   String
-  otpHash  String
+model PasswordResetOtp {
+  id        String   @id @default(uuid())
+  userId    String
+  otpHash   String
   expiredAt DateTime
   createdAt DateTime @default(now())
-  attempts  Int @default(0)
+  attempts  Int      @default(0)
 
-  user User @relation(fields : [userId] , references : [id] , onDelete:Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-
-
-
-model LoginOtp{
-  id       String  @id @default(uuid())
-  userId   String
-  otpHash  String
+model LoginOtp {
+  id        String   @id @default(uuid())
+  userId    String
+  otpHash   String
   expiredAt DateTime
-  attempts  Int @default(0)
+  attempts  Int      @default(0)
   createdAt DateTime @default(now())
 
-  user User @relation(fields : [userId] , references : [id], onDelete : Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-
 }
 
-
-
-
-model RegisterOtp{
+model RegisterOtp {
   id String @id @default(uuid())
 
-  userId  String 
-  user User @relation(fields:[userId],references:[id] , onDelete:Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  otpHash String
+  otpHash   String
   createdAt DateTime @default(now())
   expiredAt DateTime
-  attempts Int @default(0)
+  attempts  Int      @default(0)
 
   @@index([userId])
 }
 
-
-
-
 model User {
-  id        String      @id @default(uuid())
-  name      String
-  username  String?  @unique
-  email     String   @unique
-  password  String?
+  id       String  @id @default(uuid())
+  name     String
+  username String? @unique
+  email    String  @unique
+  password String?
 
-  avatar    String?
+  avatar String?
 
   refreshToken String?
 
   isEmailVerified Boolean @default(false)
-  isActive  Boolean @default(false)
+  isActive        Boolean @default(false)
 
-  loginOtps LoginOtp[]
-  passwordResetOtps PasswordResetOtp[]
-  registerOtp RegisterOtp[]
-  organizations OrganizationMember[]
-  sentInvitation OrganizationInvitation[] @relation("organizationInviter")
-  joinRequests OrganizationJoinRequest[] 
+  loginOtps           LoginOtp[]
+  passwordResetOtps   PasswordResetOtp[]
+  registerOtp         RegisterOtp[]
+  organizations       OrganizationMember[]
+  sentInvitation      OrganizationInvitation[]  @relation("organizationInviter")
+  joinRequests        OrganizationJoinRequest[]
   reviewedJoinRequest OrganizationJoinRequest[] @relation("JoinRequestReviewer")
 
   projectMemberships ProjectMember[]
-  oauthAccounts OAuthAccount[]
-  teamMemberships TeamMember[]
+  oauthAccounts      OAuthAccount[]
+  teamMemberships    TeamMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-
-
-
-model OAuthAccount{
+model OAuthAccount {
   id String @id @default(uuid())
 
-   provider  AuthProvider
-   providerId String
+  provider   AuthProvider
+  providerId String
 
-   userId  String
-   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-   createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([provider, providerId])
   @@index([userId])
 }
 
-
-
 model Organization {
-  id          String @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
-  slug        String @unique
+  slug        String  @unique
   description String?
   avatar      String?
   isActive    Boolean @default(true)
 
-  allowJoinRequests Boolean @default(false)
-  visibility OrganizationVisibility @default(PRIVATE)
+  allowJoinRequests Boolean                @default(false)
+  visibility        OrganizationVisibility @default(PRIVATE)
 
-  members OrganizationMember[]
-  invitations OrganizationInvitation[]
+  members      OrganizationMember[]
+  invitations  OrganizationInvitation[]
   joinRequests OrganizationJoinRequest[]
-  projects  Project[]
-  teams Team[]
+  projects     Project[]
+  teams        Team[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-
-
 model OrganizationMember {
   id String @id @default(uuid())
 
   userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   role OrganizationRole @default(MEMBER)
 
@@ -154,19 +134,16 @@ model OrganizationMember {
   @@unique([organizationId, userId])
 }
 
-
-
-
-model OrganizationInvitation{
+model OrganizationInvitation {
   id String @id @default(uuid())
 
   organizationId String
-  organization Organization @relation(fields:[organizationId] , references:[id] , onDelete:Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  invitedById String 
-  invitedBy User @relation("organizationInviter" , fields:[invitedById] , references:[id] , onDelete:Cascade)
+  invitedById String
+  invitedBy   User   @relation("organizationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
 
-  email String 
+  email String
 
   role OrganizationRole @default(MEMBER)
 
@@ -180,25 +157,22 @@ model OrganizationInvitation{
 
   acceptedAt DateTime?
 
-  @@unique([organizationId , email])
+  @@unique([organizationId, email])
   @@index([email])
   @@index([expiredAt])
 }
 
-
-
-model OrganizationJoinRequest{
-
+model OrganizationJoinRequest {
   id String @id @default(uuid())
 
-  userId String 
-  user User @relation(fields:[userId] , references:[id],onDelete:Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   organizationId String
-  organization Organization @relation(fields:[organizationId] , references:[id],onDelete:Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   reviewedById String?
-  reviewedBy User? @relation("JoinRequestReviewer", fields:[reviewedById] , references:[id] , onDelete:SetNull)
+  reviewedBy   User?   @relation("JoinRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   message String?
 
@@ -207,44 +181,43 @@ model OrganizationJoinRequest{
   reviewedAt DateTime?
 
   requestedAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime @updatedAt
 
   @@unique([organizationId, userId])
   @@index([organizationId, status])
   @@index([userId])
-
 }
 
 model Project {
   id String @id @default(uuid())
 
   organizationId String
-  organization Organization @relation( fields :[organizationId] , references:[id] , onDelete:Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  name String
-  slug String 
+  name        String
+  slug        String
   description String?
-  avatar String?
+  avatar      String?
 
   isArchieved Boolean @default(false)
 
   members ProjectMember[]
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([organizationId , slug])
+  @@unique([organizationId, slug])
   @@index([organizationId])
 }
 
-model ProjectMember{
+model ProjectMember {
   id String @id @default(uuid())
 
   projectId String
-  project Project @relation( fields : [projectId] , references:[id] , onDelete:Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   userId String
-  user User @relation(fields:[userId] , references:[id] , onDelete:Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   role projectRole
 
@@ -253,21 +226,21 @@ model ProjectMember{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique ([projectId,userId])
+  @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
 }
 
-model Team{
+model Team {
   id String @id @default(uuid())
 
   organizationId String
-  organization Organization @relation(fields : [organizationId] , references:[id],onDelete:Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  name String
-  slug String 
+  name        String
+  slug        String
   description String?
-  avatar String?
+  avatar      String?
 
   isActive Boolean @default(true)
 
@@ -276,68 +249,68 @@ model Team{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([organizationId , slug])
+  @@unique([organizationId, slug])
   @@index([organizationId])
 }
 
 model TeamMember {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    teamId String
-    team Team @relation(fields: [teamId],references: [id],onDelete: Cascade)
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-    userId String
-    user User @relation(fields: [userId],references: [id],onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    role TeamRole
+  role TeamRole
 
-    joinedAt DateTime @default(now())
+  joinedAt DateTime @default(now())
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([teamId, userId])
-    @@index([teamId])
-    @@index([userId])
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
 }
 
-
-
-enum AuthProvider{
+enum AuthProvider {
   EMAIL
   GOOGLE
   GITHUB
 }
+
 enum OrganizationRole {
   OWNER
   ADMIN
   MEMBER
 }
 
-enum InvitationStatus{
+enum InvitationStatus {
   PENDING
   ACCEPTED
   CANCELLED
 }
-enum joinRequestStatus{
+
+enum joinRequestStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
-enum OrganizationVisibility{
+enum OrganizationVisibility {
   PRIVATE
   PUBLIC
 }
 
-enum projectRole{
+enum projectRole {
   OWNER
   ADMIN
   MEMBER
   VIEWER
 }
 
-enum TeamRole{
+enum TeamRole {
   OWNER
   ADMIN
   MEMBER
