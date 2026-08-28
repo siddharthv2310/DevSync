@@ -342,14 +342,14 @@ export const addTeamMember = async (organizationId: string, teamId: string, user
 
         return teamMember;
 
-    } 
+    }
     catch (error) {
 
-        if (error instanceof Prisma.PrismaClientKnownRequestError ) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
 
             if (error.code === "P2002") {
 
-                throw new ApiErrors( 409, "User is already a member of this team");
+                throw new ApiErrors(409, "User is already a member of this team");
             }
         }
 
@@ -358,7 +358,7 @@ export const addTeamMember = async (organizationId: string, teamId: string, user
 };
 
 
-export const updateTeamMemberRole = async ( organizationId: string, teamId: string,
+export const updateTeamMemberRole = async (organizationId: string, teamId: string,
     actorUserId: string,
     targetUserId: string,
     newRole: TeamRole,
@@ -384,7 +384,7 @@ export const updateTeamMemberRole = async ( organizationId: string, teamId: stri
         organizationRole === OrganizationRole.OWNER ||
         organizationRole === OrganizationRole.ADMIN;
 
-   
+
     const targetMembership =
         await prisma.teamMember.findUnique({
             where: {
@@ -407,10 +407,10 @@ export const updateTeamMemberRole = async ( organizationId: string, teamId: stri
         );
     }
 
-   
+
     if (isOrganizationManager) {
 
-        
+
         if (
             organizationRole === OrganizationRole.ADMIN &&
             targetMembership.role === TeamRole.OWNER
@@ -421,7 +421,7 @@ export const updateTeamMemberRole = async ( organizationId: string, teamId: stri
             );
         }
 
-       
+
         if (
             organizationRole === OrganizationRole.ADMIN &&
             targetMembership.role === TeamRole.ADMIN
@@ -455,7 +455,7 @@ export const updateTeamMemberRole = async ( organizationId: string, teamId: stri
             );
         }
 
-        
+
         if (
             targetMembership.role === TeamRole.OWNER
         ) {
@@ -465,7 +465,7 @@ export const updateTeamMemberRole = async ( organizationId: string, teamId: stri
             );
         }
 
-        
+
         if (
             actorMembership.role === TeamRole.MEMBER
         ) {
@@ -475,7 +475,7 @@ export const updateTeamMemberRole = async ( organizationId: string, teamId: stri
             );
         }
 
-       
+
         if (
             actorMembership.role === TeamRole.ADMIN &&
             targetMembership.role === TeamRole.ADMIN
@@ -533,4 +533,93 @@ export const updateTeamMemberRole = async ( organizationId: string, teamId: stri
 
         throw error;
     }
+};
+
+export const removeTeamMember = async (organizationId: string, teamId: string, actorUserId: string, targetUserId: string, organizationRole: OrganizationRole) => {
+
+    if (actorUserId === targetUserId) {
+        throw new ApiErrors(400, "You cannot remove yourself from the team");
+    }
+
+    const isOrganizationOwner = organizationRole === OrganizationRole.OWNER;
+
+    const isOrganizationAdmin = organizationRole === OrganizationRole.ADMIN;
+
+    const targetMembership = await prisma.teamMember.findUnique({
+        where: {
+            teamId_userId: {
+                teamId,
+                userId: targetUserId
+            }
+        },
+        select: {
+            id: true,
+            role: true
+        }
+    });
+
+    if (!targetMembership) {
+        throw new ApiErrors(404, "Team member not found");
+    }
+
+    if (targetMembership.role === TeamRole.OWNER) {
+        throw new ApiErrors(403, "The team owner cannot be removed");
+    }
+
+    if (isOrganizationOwner) {
+        await prisma.teamMember.delete({
+            where: {
+                id: targetMembership.id
+            }
+        });
+
+        return;
+    }
+
+    if (isOrganizationAdmin) {
+
+        if (targetMembership.role === TeamRole.ADMIN) {
+            throw new ApiErrors(403,"Organization admins cannot remove team admins");
+        }
+
+        await prisma.teamMember.delete({
+            where: {
+                id: targetMembership.id
+            }
+        });
+
+        return;
+    }
+
+    const actorMembership = await prisma.teamMember.findUnique({
+            where: {
+                teamId_userId: {
+                    teamId,
+                    userId: actorUserId
+                }
+            },
+            select: {
+                role: true
+            }
+        });
+
+    if (!actorMembership) {
+        throw new ApiErrors(403,"Team membership required");
+    }
+
+
+    if (actorMembership.role === TeamRole.MEMBER) {
+        throw new ApiErrors(403,"Team members cannot remove members");
+    }
+
+    
+    if ( actorMembership.role === TeamRole.ADMIN && targetMembership.role === TeamRole.ADMIN ) {
+        throw new ApiErrors(403,"Team admins cannot remove another admin");
+    }
+
+    await prisma.teamMember.delete({
+        where: {
+            id: targetMembership.id
+        }
+    });
 };

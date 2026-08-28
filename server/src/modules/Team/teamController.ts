@@ -224,3 +224,44 @@ export const updateTeamMemberRoleController = async (
         next(error);
     }
 };
+
+export const removeTeamMemberController = async (req: Request,res: Response, next: NextFunction) => {
+
+    try {
+
+        const organizationId = req.params.organizationId as string;
+
+        const teamId = req.params.teamId as string;
+
+        const targetUserId = req.params.userId as string;
+
+        const actorUserId = req.user?.userId as string;
+
+        if (!organizationId) {
+            throw new ApiErrors(400,"Organization ID is required");
+        }
+
+        if (!teamId) {
+            throw new ApiErrors(400,"Team ID is required");
+        }
+
+        if (!targetUserId) {
+            throw new ApiErrors(400, "User ID is required");
+        }
+
+        if (!actorUserId) {
+            throw new ApiErrors(401,"Authentication required");
+        }
+
+        await teamService.removeTeamMember(organizationId,teamId,actorUserId,targetUserId,req.organizationMember!.role);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team member removed successfully"
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};
