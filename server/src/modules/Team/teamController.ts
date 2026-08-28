@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { addTeamMemberSchema, createTeamSchema, getTeamMembersQuerySchema, getTeamsQuerySchema, transferTeamOwnershipSchema, updateTeamMemberRoleSchema } from "./teamValidation.js";
+import { addTeamMemberSchema, createTeamSchema, getTeamMembersQuerySchema, getTeamsQuerySchema, transferTeamOwnershipSchema, updateTeamMemberRoleSchema, updateTeamSchema } from "./teamValidation.js";
 import * as teamService from "./teamServices.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
@@ -331,6 +331,49 @@ export const transferTeamOwnershipController = async (
 
     } 
     catch (error) {
+        next(error);
+    }
+};
+
+export const updateTeamController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const result = updateTeamSchema.safeParse(req.body);
+
+        if (!result.success) {
+            throw new ApiErrors(
+                400,
+                "Invalid team update data"
+            );
+        }
+
+        const organizationId = req.params.organizationId as string;
+
+        const teamId = req.params.teamId as string;
+
+        if (!organizationId) {
+            throw new ApiErrors(400,"Organization ID is required");
+        }
+
+        if (!teamId) {
+            throw new ApiErrors(400,"Team ID is required");
+        }
+
+        const updatedTeam =
+            await teamService.updateTeam(
+                organizationId,
+                teamId,
+                result.data
+            );
+
+        return res.status(200).json({
+            success: true,
+            message: "Team updated successfully",
+            data: updatedTeam
+        });
+
+    } catch (error) {
         next(error);
     }
 };

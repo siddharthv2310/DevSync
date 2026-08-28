@@ -1,6 +1,6 @@
 import prisma from "../../config/prisma.js";
 import { OrganizationRole, Prisma, TeamRole } from "@prisma/client";
-import { CreateTeamInput } from "./teamValidation.js";
+import { CreateTeamInput, UpdateTeamInput } from "./teamValidation.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
 
@@ -728,4 +728,101 @@ export const transferTeamOwnership = async (teamId: string,currentOwnerId: strin
             }
         });
     });
+};
+
+
+export const updateTeam = async (organizationId: string,teamId: string,data: UpdateTeamInput) => {
+
+    const team = await prisma.team.findFirst({
+        where: {
+            id: teamId,
+            organizationId
+        },
+
+        select: {
+            id: true
+        }
+    });
+
+    if (!team) {
+        throw new ApiErrors(404,"Team not found");
+    }
+
+    if (data.slug) {
+
+        const existingTeam = await prisma.team.findFirst({
+                where: {
+                    organizationId,
+                    slug: data.slug,
+                    NOT: {
+                        id: teamId
+                    }
+                },
+
+                select: {
+                    id: true
+                }
+            });
+
+        if (existingTeam) {
+            throw new ApiErrors(409,"A team with this slug already exists in this organization");
+        }
+    }
+
+    try {
+
+        const updatedTeam = await prisma.team.update({
+
+                where: {
+                    id: teamId
+                },
+
+                data: {
+                    ...(data.name !== undefined && {
+                        name: data.name
+                    }),
+
+                    ...(data.slug !== undefined && {
+                        slug: data.slug
+                    }),
+
+                    ...(data.description !== undefined && {
+                        description: data.description
+                    }),
+
+                    ...(data.avatar !== undefined && {
+                        avatar: data.avatar
+                    })
+                },
+
+                select: {
+                    id: true,
+                    organizationId: true,
+                    name: true,
+                    slug: true,
+                    description: true,
+                    avatar: true,
+                    isActive: true,
+                    createdAt: true,
+                    updatedAt: true
+                }
+            });
+
+        return updatedTeam;
+
+    } 
+    catch (error) {
+
+        if (
+            error instanceof
+            Prisma.PrismaClientKnownRequestError
+        ) {
+
+            if (error.code === "P2002") {
+                throw new ApiErrors(409,"A team with this slug already exists in this organization");
+            }
+        }
+
+        throw error;
+    }
 };
