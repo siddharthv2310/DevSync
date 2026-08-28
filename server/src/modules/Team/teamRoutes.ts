@@ -3,7 +3,7 @@ import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { organizationMiddleware } from "../../middlewares/organizationMiddleware.js";
 import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "../manageOrganization/Organization/organizationPermission.js";
-import { addTeamMemberController, createTeamController, getOrganizationTeamsController, getTeamDetailsController, getTeamMembersController, removeTeamMemberController, updateTeamMemberRoleController } from "./teamController.js";
+import { addTeamMemberController, createTeamController, getOrganizationTeamsController, getTeamDetailsController, getTeamMembersController, leaveTeamController, removeTeamMemberController, updateTeamMemberRoleController } from "./teamController.js";
 import { teamMiddleware } from "../../middlewares/teamMiddleware.js";
 import { teamPermission } from "./teamPermissions.js";
 import { requireTeamPermission } from "../../middlewares/teamPermissionMiddleWare.js";
@@ -17,5 +17,6 @@ router.get( "/:teamId/members",authMiddleware,organizationMiddleware,teamMiddlew
 router.use("/:teamId/embers",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.ADD_MEMBERS),addTeamMemberController);
 router.patch("/:teamId/members/:userId/role",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.UPDATE_MEMBER_ROLE),updateTeamMemberRoleController);
 router.delete("/:teamId/members/:userId",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.REMOVE_MEMBERS),removeTeamMemberController);
+router.delete("/:teamId/membership",authMiddleware,organizationMiddleware,teamMiddleware,leaveTeamController);
 
 export default router;

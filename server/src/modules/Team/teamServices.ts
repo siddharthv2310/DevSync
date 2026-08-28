@@ -579,7 +579,7 @@ export const removeTeamMember = async (organizationId: string, teamId: string, a
     if (isOrganizationAdmin) {
 
         if (targetMembership.role === TeamRole.ADMIN) {
-            throw new ApiErrors(403,"Organization admins cannot remove team admins");
+            throw new ApiErrors(403, "Organization admins cannot remove team admins");
         }
 
         await prisma.teamMember.delete({
@@ -592,34 +592,65 @@ export const removeTeamMember = async (organizationId: string, teamId: string, a
     }
 
     const actorMembership = await prisma.teamMember.findUnique({
-            where: {
-                teamId_userId: {
-                    teamId,
-                    userId: actorUserId
-                }
-            },
-            select: {
-                role: true
+        where: {
+            teamId_userId: {
+                teamId,
+                userId: actorUserId
             }
-        });
+        },
+        select: {
+            role: true
+        }
+    });
 
     if (!actorMembership) {
-        throw new ApiErrors(403,"Team membership required");
+        throw new ApiErrors(403, "Team membership required");
     }
 
 
     if (actorMembership.role === TeamRole.MEMBER) {
-        throw new ApiErrors(403,"Team members cannot remove members");
+        throw new ApiErrors(403, "Team members cannot remove members");
     }
 
-    
-    if ( actorMembership.role === TeamRole.ADMIN && targetMembership.role === TeamRole.ADMIN ) {
-        throw new ApiErrors(403,"Team admins cannot remove another admin");
+
+    if (actorMembership.role === TeamRole.ADMIN && targetMembership.role === TeamRole.ADMIN) {
+        throw new ApiErrors(403, "Team admins cannot remove another admin");
     }
 
     await prisma.teamMember.delete({
         where: {
             id: targetMembership.id
+        }
+    });
+};
+
+export const leaveTeam = async (teamId: string, userId: string) => {
+
+    const membership = await prisma.teamMember.findUnique({
+        where: {
+            teamId_userId: {
+                teamId,
+                userId
+            }
+        },
+
+        select: {
+            id: true,
+            role: true
+        }
+    });
+
+    if (!membership) {
+        throw new ApiErrors(404,"Team membership not found");
+    }
+
+    if (membership.role === TeamRole.OWNER) {
+        throw new ApiErrors(403,"Team owner cannot leave the team. Transfer ownership first.");
+    }
+
+    await prisma.teamMember.delete({
+        where: {
+            id: membership.id
         }
     });
 };

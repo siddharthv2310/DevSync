@@ -265,3 +265,33 @@ export const removeTeamMemberController = async (req: Request,res: Response, nex
         next(error);
     }
 };
+
+
+export const leaveTeamController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const teamId = req.params.teamId as string ;
+
+        const userId = req.user?.userId as string;
+
+        if (!teamId) {
+            throw new ApiErrors(400,"Team ID is required");
+        }
+
+        if (!userId) {
+            throw new ApiErrors(401,"Authentication required");
+        }
+
+        await teamService.leaveTeam(teamId,userId );
+
+        return res.status(200).json({
+            success: true,
+            message: "You have left the team successfully"
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};
