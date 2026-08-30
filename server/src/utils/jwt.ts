@@ -5,7 +5,7 @@ export const generateAccessToken = (userId: string) => {
     { userId },
     process.env.JWT_SECRET!,
     {
-      expiresIn: (process.env.ACCESS_TOKEN_EXPIRES ?? "15m") as NonNullable<SignOptions["expiresIn"]>,
+      expiresIn: (process.env.ACCESS_TOKEN_EXPIRES ?? "1d") as NonNullable<SignOptions["expiresIn"]>,
     }
   );
 };

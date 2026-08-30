@@ -15,7 +15,7 @@ router.use("/auth",authRoutes);
 router.use("/organization",organizationRoutes);
 router.use("/organizations/:organizationId/invitations",invitationsRoute);
 router.use("/invitations", invitationsRoute);
-router.use("/organization/:organizationId/join-request",joinRequestRouter);
+router.use("/organizations/:organizationId/join-request",joinRequestRouter);
 router.use("/organizations/:organizationId/settings",organizationSettingRouter);
 router.use("/organizations/discover",organizationDiscoveryRouter);
 router.use("/organizations/:organizationId/projects",projectRouter);

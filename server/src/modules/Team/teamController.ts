@@ -130,11 +130,7 @@ export const getTeamMembersController = async (req: Request, res: Response, next
     }
 };
 
-export const addTeamMemberController = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+export const addTeamMemberController = async (req: Request,res: Response,next: NextFunction) => {
 
     try {
 
