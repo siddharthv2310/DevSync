@@ -6,6 +6,7 @@ import { createTeamInvitationInput } from "./teamInvitationValidation.js";
 import { TeamInvitationStatus, TeamRole } from "@prisma/client";
 import { createInvitation } from "../../manageOrganization/invitation/invitationServices.js";
 import { generateInvitationToken } from "../../../utils/invitation.js";
+import { sendTeamInvitationEmail } from "../../../utils/email.js";
 
 
 export const createTeamInvitation = async (organizationId: string, teamId: string, invitedById: string, data: createTeamInvitationInput) => {
@@ -36,8 +37,18 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
         },
 
         select: {
-            userId: true
-        }
+            user:{
+                select:{
+                    userId: true,
+                    email: true,
+                }
+            },
+            organization: {
+                select: {
+                    name: true,
+                },
+            },
+        },
     });
 
     if (!organizationMembership) {
@@ -82,10 +93,12 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
 
     }
 
-    const {token,tokenHash} = generateInvitationToken();
+
+    const { token, tokenHash } = generateInvitationToken();
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
+    await sendTeamInvitationEmail(organizationMembership.user.email, team.name,organizationMembership.organization.name,token);
 
     let invitation;
 
@@ -148,10 +161,7 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
     }
 
 
-    return {
-        invitation,
-        token: token
-    };
+    return invitation;
 };
 
 
