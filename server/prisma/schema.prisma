@@ -150,9 +150,9 @@ model OrganizationInvitation {
 
   role OrganizationRole @default(MEMBER)
 
-  tokenHash String
+  tokenHash String @unique
 
-  expiredAt DateTime
+  expiresAt DateTime
 
   invitedAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -164,7 +164,7 @@ model OrganizationInvitation {
 
   @@unique([organizationId, email])
   @@index([email])
-  @@index([expiredAt])
+  @@index([expiresAt])
 }
 
 model OrganizationJoinRequest {

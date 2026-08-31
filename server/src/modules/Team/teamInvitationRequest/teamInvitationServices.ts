@@ -1,10 +1,7 @@
-import crypto from "crypto";
-
 import prisma from "../../../config/prisma.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import { createTeamInvitationInput } from "./teamInvitationValidation.js";
 import { TeamInvitationStatus, TeamRole } from "@prisma/client";
-import { createInvitation } from "../../manageOrganization/invitation/invitationServices.js";
 import { generateInvitationToken, hashInvitationToken } from "../../../utils/invitation.js";
 import { sendTeamInvitationEmail } from "../../../utils/email.js";
 
@@ -183,7 +180,7 @@ export const getTeamInvitations = async (organizationId: string, teamId: string,
     });
 
     if (!team) {
-        throw new ApiErrors(40, "Team not found");
+        throw new ApiErrors(404, "Team not found");
     }
 
     const skip = (page - 1) * limit;
@@ -255,7 +252,7 @@ export const getTeamInvitations = async (organizationId: string, teamId: string,
 
 export const acceptTeamInvitation = async (userId: string, rawToken: string) => {
 
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const tokenHash = hashInvitationToken(rawToken);
 
     const invitation = await prisma.teamInvitation.findUnique({
         where: {

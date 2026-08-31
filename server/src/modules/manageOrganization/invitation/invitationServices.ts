@@ -1,12 +1,12 @@
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import prisma from "../../../config/prisma.js";
-import { InvitationStatus, OrganizationRole} from "@prisma/client";
+import { InvitationStatus, OrganizationRole } from "@prisma/client";
 import { generateInvitationToken, hashInvitationToken } from "../../../utils/invitation.js";
 import { sendOrganizationInvitationEmail } from "../../../utils/email.js";
 
 
 
-export const createInvitation = async(organizationId: string, invitedById: string, email: string, role: OrganizationRole)=>{
+export const createInvitation = async (organizationId: string, invitedById: string, email: string, role: OrganizationRole) => {
     const inviter = await prisma.user.findUnique({
         where: {
             id: invitedById
@@ -17,7 +17,7 @@ export const createInvitation = async(organizationId: string, invitedById: strin
     });
 
     if (inviter?.email === email) {
-        throw new ApiErrors(400,"You cannot invite yourself");
+        throw new ApiErrors(400, "You cannot invite yourself");
     }
 
     const existingMember = await prisma.organizationMember.findFirst({
@@ -30,7 +30,7 @@ export const createInvitation = async(organizationId: string, invitedById: strin
     });
 
     if (existingMember) {
-        throw new ApiErrors(409,"User is already a member" );
+        throw new ApiErrors(409, "User is already a member");
     }
 
     const existingInvitation = await prisma.organizationInvitation.findUnique({
@@ -42,11 +42,11 @@ export const createInvitation = async(organizationId: string, invitedById: strin
         }
     });
 
-    if ( existingInvitation && existingInvitation.status === InvitationStatus.PENDING) {
-        if (existingInvitation.expiredAt > new Date()) {
-            throw new ApiErrors(409,"User already has a pending invitation");
+    if (existingInvitation && existingInvitation.status === InvitationStatus.PENDING) {
+        if (existingInvitation.expiresAt > new Date()) {
+            throw new ApiErrors(409, "User already has a pending invitation");
         }
-    
+
         await prisma.organizationInvitation.update({
             where: {
                 id: existingInvitation.id
@@ -62,18 +62,19 @@ export const createInvitation = async(organizationId: string, invitedById: strin
 
     const { token, tokenHash } = generateInvitationToken();
 
-    const expiredAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    const organization = await prisma.$transaction(async(tx)=>{
+    const organization = await prisma.$transaction(async (tx) => {
 
         const organization = await tx.organization.findUnique({
-            where:{
-                id:organizationId,
+            where: {
+                id: organizationId,
+                isActive:true,
             }
         });
 
         if (!organization) {
-            throw new ApiErrors(404,"Organization not found");
+            throw new ApiErrors(404, "Organization not found");
         }
 
         if (existingInvitation) {
@@ -84,11 +85,11 @@ export const createInvitation = async(organizationId: string, invitedById: strin
                 data: {
                     tokenHash,
                     role,
-                    expiredAt,
+                    expiresAt,
                     acceptedAt: null
                 }
             });
-        } 
+        }
         else {
             await tx.organizationInvitation.create({
                 data: {
@@ -97,68 +98,80 @@ export const createInvitation = async(organizationId: string, invitedById: strin
                     email,
                     role,
                     tokenHash,
-                    expiredAt
+                    expiresAt
                 }
             });
         }
         return organization;
     })
 
-    await sendOrganizationInvitationEmail(email,organization.name , token);
+    await sendOrganizationInvitationEmail(email, organization.name, token);
 
 }
 
 
-export const acceptInvitation = async (token:string , userId:string)=>{
+export const acceptInvitation = async (token: string, userId: string) => {
     const hashedToken = hashInvitationToken(token);
 
     const invitation = await prisma.organizationInvitation.findFirst({
-        where:{
-            tokenHash:hashedToken,
+        where: {
+            tokenHash: hashedToken,
         },
-        include:{
-            organization:{
-                select:{
-                    id:true,
-                    name:true,
-                    isActive:true,
+        include: {
+            organization: {
+                select: {
+                    id: true,
+                    name: true,
+                    isActive: true,
                 },
             },
         },
     });
 
-    if(!invitation){
-        throw new ApiErrors(404,"invalid invitation");
+    if (!invitation) {
+        throw new ApiErrors(404, "invalid invitation");
     }
 
-    if(invitation.respondedAt){
-        throw new ApiErrors(409,"Invitation has already been responded");
+    if (invitation.respondedAt) {
+        throw new ApiErrors(409, "Invitation has already been responded");
     }
 
-    if(invitation.expiredAt <= new Date()){
-        throw new ApiErrors(410, "Invitation has expired");
+    if (invitation.expiresAt <= new Date()) {
+        await prisma.organizationInvitation.update({
+            where: {
+                id: invitation.id
+            },
+
+            data: {
+                status: InvitationStatus.EXPIRED,
+                respondedAt: new Date()
+            }
+        });
+
+        throw new ApiErrors(410, "Team invitation has expired");
     }
 
-    if(!invitation.organization.isActive){
+
+    if (!invitation.organization.isActive) {
         throw new ApiErrors(404, "Organization not found");
     }
 
     const user = await prisma.user.findUnique({
-        where:{
-            id:userId,
+        where: {
+            id: userId,
         },
-        select:{
-            id:true,
-            email:true,
+        select: {
+            id: true,
+            email: true,
         },
     });
 
-    if(!user){
+    if (!user) {
         throw new ApiErrors(404, "user not found");
     }
 
-    if(user.email.toLowerCase() !== invitation.email.toLowerCase()){
-        throw new ApiErrors(403,  "This invitation was sent to a different email address");
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+        throw new ApiErrors(403, "This invitation was sent to a different email address");
     }
 
     const existingMembership =
@@ -175,35 +188,22 @@ export const acceptInvitation = async (token:string , userId:string)=>{
         throw new ApiErrors(409, "You are already a member of this organization");
     }
 
-    if (invitation.expiredAt <= new Date()) {
-        await prisma.organizationInvitation.update({
-            where: {
-                id: invitation.id
-            },
-
-            data: {
-                status: InvitationStatus.EXPIRED,
-                respondedAt: new Date()
-            }
-        });
-
-        throw new ApiErrors(410, "Team invitation has expired");
-    }
-
-    await prisma.$transaction(async(tx)=>{
+    
+    await prisma.$transaction(async (tx) => {
         await tx.organizationMember.create({
-            data:{
-                organizationId:invitation.organizationId,
+            data: {
+                organizationId: invitation.organizationId,
                 userId,
                 role: invitation.role,
             },
         });
 
         await tx.organizationInvitation.update({
-            where:{
+            where: {
                 id: invitation.id,
             },
             data: {
+                status: InvitationStatus.ACCEPTED,
                 respondedAt: new Date()
             },
         })
@@ -220,37 +220,56 @@ export const rejectInvitation = async (userId: string, rawToken: string) => {
 
     const tokenHash = hashInvitationToken(rawToken);
 
-    const invitation = await prisma.teamInvitation.findUnique({
+    const invitation = await prisma.organizationInvitation.findUnique({
         where: {
             tokenHash
         },
 
         select: {
             id: true,
-            teamId: true,
-            invitedUserId: true,
+            organizationId: true,
+            email: true,
             status: true,
             expiresAt: true
         }
     });
 
+
     if (!invitation) {
-        throw new ApiErrors(404, "Invalid team invitation");
+        throw new ApiErrors(404, "Invalid organization invitation");
     }
 
 
-    if (invitation.invitedUserId !== userId) {
-        throw new ApiErrors(403, "This invitation was not sent to you");
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId
+        },
+
+        select: {
+            id: true,
+            email: true
+        }
+    });
+
+
+    if (!user) {
+        throw new ApiErrors(404, "User not found");
+    }
+
+
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+
+        throw new ApiErrors(403, "This invitation was sent to a different email address");
     }
 
     if (invitation.status !== InvitationStatus.PENDING) {
+
         throw new ApiErrors(409, `Invitation is already ${invitation.status.toLowerCase()}`);
     }
 
-
     if (invitation.expiresAt <= new Date()) {
 
-        await prisma.teamInvitation.update({
+        await prisma.organizationInvitation.update({
             where: {
                 id: invitation.id
             },
@@ -261,10 +280,11 @@ export const rejectInvitation = async (userId: string, rawToken: string) => {
             }
         });
 
-        throw new ApiErrors(410, "Team invitation has expired");
+        throw new ApiErrors(410, "Organization invitation has expired");
     }
 
-    const rejectedInvitation = await prisma.teamInvitation.update({
+    const rejectedInvitation = await prisma.organizationInvitation.update({
+
         where: {
             id: invitation.id
         },
@@ -276,34 +296,30 @@ export const rejectInvitation = async (userId: string, rawToken: string) => {
 
         select: {
             id: true,
+            organizationId: true,
             status: true,
             respondedAt: true,
             updatedAt: true
         }
     });
 
+
     return rejectedInvitation;
 };
 
 
-export const getOrganizationInvitations = async (
-    organizationId: string
-) => {
+export const getOrganizationInvitations = async (organizationId: string) => {
 
     const invitations =
         await prisma.organizationInvitation.findMany({
             where: {
-                organizationId,
-                acceptedAt: null,
-                expiredAt: {
-                    gt: new Date()
-                }
+                organizationId
             },
             select: {
                 id: true,
                 email: true,
                 role: true,
-                expiredAt: true,
+                expiresAt: true,
                 invitedAt: true,
 
                 invitedBy: {
@@ -324,7 +340,7 @@ export const getOrganizationInvitations = async (
 };
 
 
-export const cancelInvitation = async ( organizationId: string,invitationId: string,actorRole: OrganizationRole) => {
+export const cancelInvitation = async (organizationId: string, invitationId: string, actorRole: OrganizationRole) => {
 
     const invitation = await prisma.organizationInvitation.findUnique({
         where: {
@@ -379,23 +395,23 @@ export const cancelInvitation = async ( organizationId: string,invitationId: str
 };
 
 
-export const expireTeamInvitations = async () => {
+export const expireOrganizationInvitations = async () => {
 
     const now = new Date();
 
-    const result = await prisma.teamInvitation.updateMany({
-            where: {
-                status:InvitationStatus.PENDING,
-                expiresAt: {
-                    lte: now
-                }
-            },
-
-            data: {
-                status:InvitationStatus.EXPIRED,
-                respondedAt: now
+    const result = await prisma.organizationInvitation.updateMany({
+        where: {
+            status: InvitationStatus.PENDING,
+            expiresAt: {
+                lte: now
             }
-        });
+        },
+
+        data: {
+            status: InvitationStatus.EXPIRED,
+            respondedAt: now
+        }
+    });
 
     return result.count;
 };
