@@ -8,6 +8,8 @@ import organizationDiscoveryRouter from "../../modules/manageOrganization/organi
 import projectRouter from "../../modules/projects/index.js";
 import teamRouter from "../../modules/Team/index.js"
 import teamDashboardRoute from "../../modules/Team/Dashboard/index.js";
+import teamInvitationRoute from"../../modules/Team/teamInvitationRequest/index.js";
+
 
 const router = Router(); 
 
@@ -21,5 +23,6 @@ router.use("/organizations/discover",organizationDiscoveryRouter);
 router.use("/organizations/:organizationId/projects",projectRouter);
 router.use("/organizations/:organizationId/teams",teamRouter);
 router.use("organizations/:organizationId/teams/:teamId/dashboard",teamDashboardRoute);
+router.use("/organizations/:organizationId/:teamId/invitations", teamInvitationRoute);
 
 export default router;

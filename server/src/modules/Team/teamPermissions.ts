@@ -8,5 +8,8 @@ export enum teamPermission {
     VIEW_MEMBERS = "team-members:view",
     ADD_MEMBERS = "team-members:add",
     REMOVE_MEMBERS = "team-members:remove",
-    UPDATE_MEMBER_ROLE = "team-members:update-role"
+    UPDATE_MEMBER_ROLE = "team-members:update-role",
+
+    INVITE_MEMBERS = "team-members:invite",
+    VIEW_INVITATIONS = "team-invitations:view",
 }
