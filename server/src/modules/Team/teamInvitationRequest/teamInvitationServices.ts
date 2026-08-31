@@ -39,7 +39,7 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
         select: {
             user: {
                 select: {
-                    userId: true,
+                    id: true,
                     email: true,
                 }
             },
@@ -84,13 +84,20 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
     });
 
 
-    if (existingInvitation && existingInvitation.status === "PENDING"
-    ) {
-
+    if ( existingInvitation && existingInvitation.status === TeamInvitationStatus.PENDING) {
         if (existingInvitation.expiresAt > new Date()) {
-            throw new ApiErrors(409, "User already has a pending invitation");
+            throw new ApiErrors(409,"User already has a pending invitation");
         }
-
+    
+        await prisma.teamInvitation.update({
+            where: {
+                id: existingInvitation.id
+            },
+            data: {
+                status: TeamInvitationStatus.EXPIRED,
+                respondedAt: new Date()
+            }
+        });
     }
 
 
@@ -98,11 +105,7 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    await sendTeamInvitationEmail(organizationMembership.user.email, team.name, organizationMembership.organization.name, token);
-
     let invitation;
-
-
     if (existingInvitation) {
 
         invitation = await prisma.teamInvitation.update({
@@ -155,11 +158,12 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
                 message: true,
                 expiresAt: true,
                 createdAt: true,
-                UpdatedAt: true
+                updatedAt: true
             }
         });
     }
 
+    await sendTeamInvitationEmail(organizationMembership.user.email, team.name, organizationMembership.organization.name, token);
 
     return invitation;
 };
@@ -440,4 +444,73 @@ export const rejectTeamInvitation = async (userId: string, rawToken: string) => 
     });
 
     return rejectedInvitation;
+};
+
+export const cancelTeamInvitation = async (organizationId: string, teamId: string, invitationId: string) => {
+
+    const invitation =
+        await prisma.teamInvitation.findFirst({
+            where: {
+                id: invitationId,
+                teamId,
+                team: {
+                    organizationId
+                }
+            },
+
+            select: {
+                id: true,
+                status: true,
+                expiresAt: true
+            }
+        });
+
+    if (!invitation) {
+        throw new ApiErrors(404, "Team invitation not found");
+    }
+
+    if (invitation.status !== TeamInvitationStatus.PENDING) {
+        throw new ApiErrors(409, `Cannot cancel an invitation that is already ${invitation.status.toLowerCase()}`);
+    }
+
+    const cancelledInvitation = await prisma.teamInvitation.update({
+        where: {
+            id: invitation.id
+        },
+
+        data: {
+            status: TeamInvitationStatus.CANCELLED,
+            respondedAt: new Date()
+        },
+
+        select: {
+            id: true,
+            status: true,
+            respondedAt: true,
+            updatedAt: true
+        }
+    });
+
+    return cancelledInvitation;
+};
+
+export const expireTeamInvitations = async () => {
+
+    const now = new Date();
+
+    const result = await prisma.teamInvitation.updateMany({
+            where: {
+                status: TeamInvitationStatus.PENDING,
+                expiresAt: {
+                    lte: now
+                }
+            },
+
+            data: {
+                status: TeamInvitationStatus.EXPIRED,
+                respondedAt: now
+            }
+        });
+
+    return result.count;
 };

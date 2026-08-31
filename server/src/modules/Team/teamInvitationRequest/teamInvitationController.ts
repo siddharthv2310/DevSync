@@ -4,7 +4,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 import { acceptTeamInvitationSchema, createTeamInvitationSchema, getTeamInvitationsQuerySchema } from "./teamInvitationValidation.js";
 
-import { acceptTeamInvitation, createTeamInvitation, getTeamInvitations, rejectTeamInvitation } from "./teamInvitationServices.js";
+import { acceptTeamInvitation, cancelTeamInvitation, createTeamInvitation, getTeamInvitations, rejectTeamInvitation } from "./teamInvitationServices.js";
 
 
 export const createTeamInvitationController = async (req: Request, res: Response, next: NextFunction) => {
@@ -157,3 +157,39 @@ export const rejectTeamInvitationController = async (req: Request,res: Response,
         next(error);
     }
 };  
+
+export const cancelTeamInvitationController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const organizationId = req.params.organizationId as string;
+
+        const teamId = req.params.teamId as string;
+
+        const invitationId = req.params.invitationId as string;
+
+        if (!organizationId) {
+            throw new ApiErrors(400,"Organization ID is required");
+        }
+
+        if (!teamId) {
+            throw new ApiErrors(400,"Team ID is required");
+        }
+
+        if (!invitationId) {
+            throw new ApiErrors(400,"Invitation ID is required");
+        }
+
+        const invitation = await cancelTeamInvitation(organizationId,teamId,invitationId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team invitation cancelled successfully",
+            data: invitation
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};

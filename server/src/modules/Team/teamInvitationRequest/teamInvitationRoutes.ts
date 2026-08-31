@@ -8,7 +8,7 @@ import { teamMiddleware } from "../../../middlewares/teamMiddleware.js";
 
 import { teamPermission }from "../teamPermissions.js";
 
-import {acceptTeamInvitationController, createTeamInvitationController, getTeamInvitationsController, rejectTeamInvitationController} from "./teamInvitationController.js";
+import {acceptTeamInvitationController, cancelTeamInvitationController, createTeamInvitationController, getTeamInvitationsController, rejectTeamInvitationController} from "./teamInvitationController.js";
 
 import { requireTeamPermission } from "../../../middlewares/teamPermissionMiddleWare.js";
 
@@ -20,5 +20,6 @@ router.post("/",authMiddleware,organizationMiddleware,teamMiddleware,requireTeam
 router.get("/",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.VIEW_INVITATIONS),getTeamInvitationsController);
 router.post("/accept",authMiddleware,acceptTeamInvitationController);
 router.post("/reject",authMiddleware,rejectTeamInvitationController);
+router.post("/:invitationId",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.CANCEL_INVITATION),cancelTeamInvitationController);
 
 export default router;

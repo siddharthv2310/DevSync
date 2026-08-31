@@ -1,6 +1,6 @@
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import prisma from "../../../config/prisma.js";
-import { InvitationStatus, OrganizationRole } from "@prisma/client";
+import { InvitationStatus, OrganizationRole} from "@prisma/client";
 import { generateInvitationToken, hashInvitationToken } from "../../../utils/invitation.js";
 import { sendOrganizationInvitationEmail } from "../../../utils/email.js";
 
@@ -42,9 +42,23 @@ export const createInvitation = async(organizationId: string, invitedById: strin
         }
     });
 
-    if(existingInvitation && !existingInvitation.respondedAt && existingInvitation.expiredAt > new Date()){
-        throw new ApiErrors(409,"An active invitation already exists");
+    if ( existingInvitation && existingInvitation.status === InvitationStatus.PENDING) {
+        if (existingInvitation.expiredAt > new Date()) {
+            throw new ApiErrors(409,"User already has a pending invitation");
+        }
+    
+        await prisma.organizationInvitation.update({
+            where: {
+                id: existingInvitation.id
+            },
+            data: {
+                status: InvitationStatus.EXPIRED,
+                respondedAt: new Date()
+            }
+        });
     }
+
+
 
     const { token, tokenHash } = generateInvitationToken();
 
@@ -93,6 +107,8 @@ export const createInvitation = async(organizationId: string, invitedById: strin
     await sendOrganizationInvitationEmail(email,organization.name , token);
 
 }
+
+
 export const acceptInvitation = async (token:string , userId:string)=>{
     const hashedToken = hashInvitationToken(token);
 
@@ -362,5 +378,26 @@ export const cancelInvitation = async ( organizationId: string,invitationId: str
 
 };
 
+
+export const expireTeamInvitations = async () => {
+
+    const now = new Date();
+
+    const result = await prisma.teamInvitation.updateMany({
+            where: {
+                status:InvitationStatus.PENDING,
+                expiresAt: {
+                    lte: now
+                }
+            },
+
+            data: {
+                status:InvitationStatus.EXPIRED,
+                respondedAt: now
+            }
+        });
+
+    return result.count;
+};
 
 
