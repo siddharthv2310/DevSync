@@ -1,13 +1,13 @@
-import {Request,Response,NextFunction} from "express";
+import { Request, Response, NextFunction } from "express";
 
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
-import {createTeamInvitationSchema, getTeamInvitationsQuerySchema} from "./teamInvitationValidation.js";
+import { acceptTeamInvitationSchema, createTeamInvitationSchema, getTeamInvitationsQuerySchema } from "./teamInvitationValidation.js";
 
-import {createTeamInvitation, getTeamInvitations} from "./teamInvitationServices.js";
+import { acceptTeamInvitation, createTeamInvitation, getTeamInvitations } from "./teamInvitationServices.js";
 
 
-export const createTeamInvitationController = async (req: Request,res: Response,next: NextFunction) => {
+export const createTeamInvitationController = async (req: Request, res: Response, next: NextFunction) => {
 
     try {
 
@@ -19,26 +19,26 @@ export const createTeamInvitationController = async (req: Request,res: Response,
 
 
         if (!organizationId) {
-            throw new ApiErrors(400,"Organization ID is required");
+            throw new ApiErrors(400, "Organization ID is required");
         }
 
         if (!teamId) {
-            throw new ApiErrors(400,"Team ID is required");
+            throw new ApiErrors(400, "Team ID is required");
         }
 
         if (!invitedById) {
-            throw new ApiErrors(401,"Authentication required");
+            throw new ApiErrors(401, "Authentication required");
         }
 
 
         const result = createTeamInvitationSchema.safeParse(req.body);
 
         if (!result.success) {
-            throw new ApiErrors(400,"Invalid invitation data");
+            throw new ApiErrors(400, "Invalid invitation data");
         }
 
 
-        const invitation =await createTeamInvitation(organizationId,teamId,invitedById,result.data);
+        const invitation = await createTeamInvitation(organizationId, teamId, invitedById, result.data);
 
 
         return res.status(201).json({
@@ -48,13 +48,13 @@ export const createTeamInvitationController = async (req: Request,res: Response,
             data: invitation
         });
 
-    } 
+    }
     catch (error) {
         next(error);
     }
 };
 
-export const getTeamInvitationsController = async (req: Request,res: Response,next: NextFunction) => {
+export const getTeamInvitationsController = async (req: Request, res: Response, next: NextFunction) => {
 
     try {
 
@@ -70,16 +70,16 @@ export const getTeamInvitationsController = async (req: Request,res: Response,ne
         }
 
         if (!teamId) {
-            throw new ApiErrors(400,"Team ID is required");
+            throw new ApiErrors(400, "Team ID is required");
         }
 
         const result = getTeamInvitationsQuerySchema.safeParse(req.query);
 
         if (!result.success) {
-            throw new ApiErrors(400,"Invalid invitation query");
+            throw new ApiErrors(400, "Invalid invitation query");
         }
 
-        const invitations = await getTeamInvitations(organizationId,teamId,result.data.page,result.data.limit,result.data.status);
+        const invitations = await getTeamInvitations(organizationId, teamId, result.data.page, result.data.limit, result.data.status);
 
         return res.status(200).json({
             success: true,
@@ -88,7 +88,40 @@ export const getTeamInvitationsController = async (req: Request,res: Response,ne
             pagination: invitations.pagination
         });
 
-    } 
+    }
+    catch (error) {
+        next(error);
+    }
+};
+
+export const acceptTeamInvitationController = async (req: Request, res: Response, next: NextFunction) => {
+
+    try {
+
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors(401, "Authentication required");
+        }
+
+
+        const result = acceptTeamInvitationSchema.safeParse(req.body);
+
+        if (!result.success) {
+            throw new ApiErrors(400, "Invalid invitation data");
+        }
+
+
+        const resultData = await acceptTeamInvitation(userId, result.data.token);
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Team invitation accepted successfully",
+            data: resultData
+        });
+
+    }
     catch (error) {
         next(error);
     }

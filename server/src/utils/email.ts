@@ -52,3 +52,4 @@ export const sendOrganizationInvitationEmail = async(email: string,organizationN
     `
   });
 };
+
