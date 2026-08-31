@@ -5,7 +5,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import { createTeamInvitationInput } from "./teamInvitationValidation.js";
 import { TeamInvitationStatus, TeamRole } from "@prisma/client";
 import { createInvitation } from "../../manageOrganization/invitation/invitationServices.js";
-import { generateInvitationToken } from "../../../utils/invitation.js";
+import { generateInvitationToken, hashInvitationToken } from "../../../utils/invitation.js";
 import { sendTeamInvitationEmail } from "../../../utils/email.js";
 
 
@@ -37,8 +37,8 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
         },
 
         select: {
-            user:{
-                select:{
+            user: {
+                select: {
                     userId: true,
                     email: true,
                 }
@@ -98,7 +98,7 @@ export const createTeamInvitation = async (organizationId: string, teamId: strin
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    await sendTeamInvitationEmail(organizationMembership.user.email, team.name,organizationMembership.organization.name,token);
+    await sendTeamInvitationEmail(organizationMembership.user.email, team.name, organizationMembership.organization.name, token);
 
     let invitation;
 
@@ -371,4 +371,73 @@ export const acceptTeamInvitation = async (userId: string, rawToken: string) => 
 
 
     return result;
+};
+
+export const rejectTeamInvitation = async (userId: string, rawToken: string) => {
+
+    const tokenHash = hashInvitationToken(rawToken);
+
+    const invitation = await prisma.teamInvitation.findUnique({
+        where: {
+            tokenHash
+        },
+
+        select: {
+            id: true,
+            teamId: true,
+            invitedUserId: true,
+            status: true,
+            expiresAt: true
+        }
+    });
+
+    if (!invitation) {
+        throw new ApiErrors(404, "Invalid team invitation");
+    }
+
+
+    if (invitation.invitedUserId !== userId) {
+        throw new ApiErrors(403, "This invitation was not sent to you");
+    }
+
+    if (invitation.status !== TeamInvitationStatus.PENDING) {
+        throw new ApiErrors(409, `Invitation is already ${invitation.status.toLowerCase()}`);
+    }
+
+
+    if (invitation.expiresAt <= new Date()) {
+
+        await prisma.teamInvitation.update({
+            where: {
+                id: invitation.id
+            },
+
+            data: {
+                status: TeamInvitationStatus.EXPIRED,
+                respondedAt: new Date()
+            }
+        });
+
+        throw new ApiErrors(410, "Team invitation has expired");
+    }
+
+    const rejectedInvitation = await prisma.teamInvitation.update({
+        where: {
+            id: invitation.id
+        },
+
+        data: {
+            status: TeamInvitationStatus.REJECTED,
+            respondedAt: new Date()
+        },
+
+        select: {
+            id: true,
+            status: true,
+            respondedAt: true,
+            updatedAt: true
+        }
+    });
+
+    return rejectedInvitation;
 };

@@ -4,7 +4,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 import { acceptTeamInvitationSchema, createTeamInvitationSchema, getTeamInvitationsQuerySchema } from "./teamInvitationValidation.js";
 
-import { acceptTeamInvitation, createTeamInvitation, getTeamInvitations } from "./teamInvitationServices.js";
+import { acceptTeamInvitation, createTeamInvitation, getTeamInvitations, rejectTeamInvitation } from "./teamInvitationServices.js";
 
 
 export const createTeamInvitationController = async (req: Request, res: Response, next: NextFunction) => {
@@ -126,3 +126,34 @@ export const acceptTeamInvitationController = async (req: Request, res: Response
         next(error);
     }
 };
+
+
+export const rejectTeamInvitationController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors( 401, "Authentication required");
+        }
+
+        const result = acceptTeamInvitationSchema.safeParse( req.body)
+
+        if (!result.success) {
+            throw new ApiErrors(400,"Invalid invitation data");
+        }
+
+        const invitation = await rejectTeamInvitation(userId,result.data.token);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team invitation rejected successfully",
+            data: invitation
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};  
