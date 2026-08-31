@@ -155,10 +155,12 @@ model OrganizationInvitation {
   expiredAt DateTime
 
   invitedAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   status InvitationStatus @default(PENDING)
 
-  acceptedAt DateTime?
+  respondedAt DateTime?
+
 
   @@unique([organizationId, email])
   @@index([email])
@@ -322,9 +324,11 @@ enum OrganizationRole {
 }
 
 enum InvitationStatus {
-  PENDING
+ PENDING
   ACCEPTED
+  REJECTED
   CANCELLED
+  EXPIRED
 }
 
 enum joinRequestStatus {

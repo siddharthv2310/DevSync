@@ -1,7 +1,7 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 
 import * as invitationService from "./invitationServices.js";
-import { createInvitationSchema } from "./invitationValidation.js";
+import { acceptInvitationSchema, createInvitationSchema } from "./invitationValidation.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 export const createInvitation = async (
@@ -25,18 +25,15 @@ export const createInvitation = async (
 };
 
 export const acceptInvitation = async ( req: Request, res: Response) => {
-    const token  = req.params.token as string;
+    const data = acceptInvitationSchema.safeParse(req.body);
+
+    if(!data.success){
+        throw new ApiErrors(400, "Invalid invitation data");
+    }
 
     const userId = req.user!.userId;
 
-    if (!token) {
-        throw new ApiErrors(
-            400,
-            "Invitation token is required"
-        );
-    }
-
-    const result =await invitationService.acceptInvitation( token,userId);
+    const result = await invitationService.acceptInvitation( data.data.token,userId);
 
     return res.status(200).json({
         success: true,
@@ -58,6 +55,37 @@ export const getOrganizationInvitations = async (req: Request,res: Response) => 
     });
 
 };
+
+
+export const rejectInvitationController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors( 401, "Authentication required");
+        }
+
+        const result = acceptInvitationSchema.safeParse( req.body)
+
+        if (!result.success) {
+            throw new ApiErrors(400,"Invalid invitation data");
+        }
+
+        const invitation = await invitationService.rejectInvitation(userId,result.data.token);
+
+        return res.status(200).json({
+            success: true,
+            message: "Team invitation rejected successfully",
+            data: invitation
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};  
 
 export const cancelInvitation = async (req: Request,res: Response) => {
 
