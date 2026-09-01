@@ -131,3 +131,84 @@ export const createTeamJoinRequest = async(organizationId:string , userId:string
         }
     });
 };
+
+
+export const getTeamJoinRequests = async (organizationId: string , teamId: string , page: number , limit: number) => {
+
+    const skip = (page - 1) * limit;
+
+    const team = await prisma.team.findFirst({
+        where: {
+            id: teamId,
+            organizationId,
+            isActive: true
+        },
+
+        select: {
+            id: true,
+            name: true
+        }
+    });
+
+    if (!team) {
+        throw new ApiErrors(404,"Team not found");
+    }
+
+
+    const [requests, total] = await prisma.$transaction([
+
+            prisma.teamJoinRequest.findMany({
+
+                where: {
+                    teamId
+                },
+
+                skip,
+
+                take: limit,
+
+                select: {
+                    id: true,
+                    message: true,
+                    status: true,
+                    respondedAt: true,
+                    createdAt: true,
+                    updatedAt: true,
+
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            username: true,
+                            email: true,
+                            avatar: true
+                        }
+                    }
+                },
+
+                orderBy: {
+                    createdAt: "desc"
+                }
+            }),
+
+            prisma.teamJoinRequest.count({
+                where: {
+                    teamId
+                }
+            })
+        ]);
+
+
+    return {
+        requests,
+
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(
+                total / limit
+            )
+        }
+    };
+};

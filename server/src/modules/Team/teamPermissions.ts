@@ -14,5 +14,6 @@ export enum teamPermission {
     VIEW_INVITATIONS = "team-invitations:view",
     CANCEL_INVITATION = "team-invitation:cancell",
 
-    VIEW_JOIN_REQUESTS = "join-requests:view"
+    VIEW_JOIN_REQUESTS = "join-requests:view",
+    APPROVE_JOIN_REQUEST = "join-requests:approve",
 }

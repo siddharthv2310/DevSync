@@ -17,6 +17,9 @@ export const teamRolePermissions: Record<TeamRole, teamPermission[] > = {
         teamPermission. INVITE_MEMBERS,
         teamPermission.VIEW_INVITATIONS,
         teamPermission.CANCEL_INVITATION,
+
+        teamPermission.VIEW_JOIN_REQUESTS,
+        teamPermission.APPROVE_JOIN_REQUEST,
     ],
     [TeamRole.ADMIN] : [
         teamPermission.VIEW_TEAM,
@@ -31,6 +34,9 @@ export const teamRolePermissions: Record<TeamRole, teamPermission[] > = {
         teamPermission. INVITE_MEMBERS,
         teamPermission.VIEW_INVITATIONS,
         teamPermission.CANCEL_INVITATION,
+
+        teamPermission.VIEW_JOIN_REQUESTS,
+        teamPermission.APPROVE_JOIN_REQUEST,
     ],
     [TeamRole.MEMBER]:[
         teamPermission.VIEW_TEAM,
