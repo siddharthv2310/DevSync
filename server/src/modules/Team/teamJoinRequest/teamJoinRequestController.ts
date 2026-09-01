@@ -121,3 +121,42 @@ export const approveTeamJoinRequestController = async (req: Request,res: Respons
         next(error);
     }
 };
+
+
+export const rejectTeamJoinRequestController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const organizationId = req.params.organizationId as string;
+
+        const teamId = req.params.teamId as string;
+
+        const requestId = req.params.requestId as string;
+
+        const reviewedById = req.user?.userId;
+
+
+        if (!reviewedById) {
+            throw new ApiErrors( 401, "Authentication required" );
+        }
+
+
+        if (!organizationId || !teamId || !requestId ) {
+            throw new ApiErrors( 400, "Organization ID, Team ID and Request ID are required" );
+        }
+
+
+        const result = await teamJoinRequestServices .rejectTeamJoinRequest( organizationId,teamId,requestId,reviewedById );
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Team join request rejected successfully",
+            data: result
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};

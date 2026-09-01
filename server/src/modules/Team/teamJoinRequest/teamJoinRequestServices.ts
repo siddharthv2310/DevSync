@@ -351,3 +351,90 @@ export const approveTeamJoinRequest = async (organizationId: string, teamId: str
         };
     });
 };
+
+
+export const rejectTeamJoinRequest = async (organizationId: string, teamId: string, requestId: string, reviewedById: string) => {
+
+    const request = await prisma.teamJoinRequest.findFirst({
+
+        where: {
+            id: requestId,
+            teamId,
+
+            team: {
+                organizationId,
+                isActive: true
+            }
+        },
+
+        select: {
+            id: true,
+            teamId: true,
+            userId: true,
+            status: true
+        }
+    });
+
+
+    if (!request) {
+        throw new ApiErrors(404, "Team join request not found");
+    }
+
+
+    if (request.status !== TeamJoinRequestStatus.PENDING
+    ) {
+        throw new ApiErrors(409, `Cannot reject a request that is already ${request.status.toLowerCase()}`);
+    }
+
+
+    const organizationMembership = await prisma.organizationMember.findUnique({
+
+        where: {
+            organizationId_userId: {
+                organizationId,
+                userId: reviewedById
+            }
+        },
+
+        select: {
+            id: true
+        }
+    });
+
+
+    if (!organizationMembership) {
+        throw new ApiErrors(403, "Reviewer is not an organization member");
+    }
+
+
+    const rejectedRequest = await prisma.teamJoinRequest.update({
+
+        where: {
+            id: request.id
+        },
+
+        data: {
+            status:
+                TeamJoinRequestStatus.REJECTED,
+
+            reviewedById,
+
+            respondedAt: new Date()
+        },
+
+        select: {
+            id: true,
+            teamId: true,
+            userId: true,
+            message: true,
+            status: true,
+            reviewedById: true,
+            respondedAt: true,
+            createdAt: true,
+            updatedAt: true
+        }
+    });
+
+
+    return rejectedRequest;
+};
