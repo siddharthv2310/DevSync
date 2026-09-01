@@ -78,6 +78,7 @@ model User {
   oauthAccounts      OAuthAccount[]
   teamMemberships    TeamMember[]
   teamJoinRequests   TeamJoinRequest[]
+  reviewedTeamJoinRequest TeamJoinRequest[] @relation("teamJoinRequestReviewer")
 
   teamInvitationRecieved TeamInvitation[]  @relation("TeamInvitationsReceived")
   teamInvitationsSent TeamInvitation[] @relation("TeamInvitationsSent")
@@ -323,6 +324,9 @@ model TeamJoinRequest{
   userId String
   user User @relation(fields:[userId],references:[id],onDelete:Cascade)
 
+  reviewedById String?
+  reviewedBy   User?   @relation("teamJoinRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
   message String?
 
   status TeamJoinRequestStatus @default(PENDING)
@@ -351,7 +355,7 @@ enum OrganizationRole {
 }
 
 enum InvitationStatus {
- PENDING
+  PENDING
   ACCEPTED
   REJECTED
   CANCELLED
