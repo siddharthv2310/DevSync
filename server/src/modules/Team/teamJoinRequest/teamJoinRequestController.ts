@@ -160,3 +160,79 @@ export const rejectTeamJoinRequestController = async (req: Request,res: Response
         next(error);
     }
 };
+
+
+export const cancelTeamJoinRequestController = async (req: Request, res: Response,next: NextFunction ) => {
+
+    try {
+
+        const organizationId = req.params.organizationId as string;
+
+        const teamId = req.params.teamId as string;
+
+        const requestId = req.params.requestId as string;
+
+        const userId = req.user?.userId;
+
+
+        if (!userId) {
+            throw new ApiErrors( 401, "Authentication required");
+        }
+
+
+        if ( !organizationId || !teamId || !requestId ) {
+            throw new ApiErrors( 400, "Organization ID, Team ID and Request ID are required");
+        }
+
+
+        const result = await teamJoinRequestServices .cancelTeamJoinRequest(organizationId,teamId,requestId,userId);
+
+
+        return res.status(200).json({
+            success: true,
+            message:"Team join request cancelled successfully",
+            data: result
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};
+
+
+export const getMyTeamJoinRequestsController = async (req: Request,res: Response,next: NextFunction) => {
+
+    try {
+
+        const organizationId = req.params.organizationId as string;
+
+        const teamId = req.params.teamId as string;
+
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors( 401,"Authentication required");
+        }
+
+        const page = Number(req.query.page) || 1;
+
+        const limit = Number(req.query.limit) || 20;
+
+        if ( page < 1 || limit < 1 || limit > 100 ) {
+            throw new ApiErrors( 400, "Invalid pagination parameters" );
+        }
+
+        const result = await teamJoinRequestServices .getMyTeamJoinRequests(organizationId,teamId,userId,page,limit);
+
+        return res.status(200).json({
+            success: true,
+            message: "Your team join requests fetched successfully",
+            data: result
+        });
+
+    } 
+    catch (error) {
+        next(error);
+    }
+};

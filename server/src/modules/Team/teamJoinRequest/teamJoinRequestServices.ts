@@ -438,3 +438,167 @@ export const rejectTeamJoinRequest = async (organizationId: string, teamId: stri
 
     return rejectedRequest;
 };
+
+export const cancelTeamJoinRequest = async (organizationId: string, teamId: string, requestId: string, userId: string) => {
+
+    const request = await prisma.teamJoinRequest.findFirst({
+
+        where: {
+            id: requestId,
+            teamId,
+
+            team: {
+                organizationId,
+                isActive: true
+            }
+        },
+
+        select: {
+            id: true,
+            teamId: true,
+            userId: true,
+            status: true
+        }
+    });
+
+
+    if (!request) {
+        throw new ApiErrors(404, "Team join request not found");
+    }
+
+
+    if (request.userId !== userId) {
+
+        throw new ApiErrors(403, "You can only cancel your own join request");
+    }
+
+
+    if (request.status !== TeamJoinRequestStatus.PENDING) {
+
+        throw new ApiErrors(409, `Cannot cancel a request that is already ${request.status.toLowerCase()}`);
+    }
+
+
+    const cancelledRequest = await prisma.teamJoinRequest.update({
+
+        where: {
+            id: request.id
+        },
+
+        data: {
+            status: TeamJoinRequestStatus.CANCELLED,
+            respondedAt: new Date()
+        },
+
+        select: {
+            id: true,
+            teamId: true,
+            userId: true,
+            message: true,
+            status: true,
+            reviewedById: true,
+            respondedAt: true,
+            createdAt: true,
+            updatedAt: true
+        }
+    });
+
+
+    return cancelledRequest;
+};
+
+
+export const getMyTeamJoinRequests = async (organizationId: string,teamId: string,userId: string,page: number,limit: number) => {
+
+    const skip = (page - 1) * limit;
+
+    const team = await prisma.team.findFirst({
+        where: {
+            id: teamId,
+            organizationId,
+            isActive: true
+        },
+
+        select: {
+            id: true,
+            name: true
+        }
+    });
+
+    if (!team) {
+        throw new ApiErrors(404,"Team not found");
+    }
+
+    const organizationMembership = await prisma.organizationMember.findUnique({
+            where: {
+                organizationId_userId: {
+                    organizationId,
+                    userId
+                }
+            },
+
+            select: {
+                id: true
+            }
+        });
+
+    if (!organizationMembership) {
+        throw new ApiErrors(403,"Organization membership required");
+    }
+
+    const [requests, total] =  await prisma.$transaction([
+
+            prisma.teamJoinRequest.findMany({
+                where: {
+                    teamId,
+                    userId
+                },
+
+                skip,
+                take: limit,
+
+                select: {
+                    id: true,
+                    teamId: true,
+                    userId: true,
+                    message: true,
+                    status: true,
+                    reviewedById: true,
+                    respondedAt: true,
+                    createdAt: true,
+                    updatedAt: true,
+
+                    reviewedBy: {
+                        select: {
+                            id: true,
+                            name: true,
+                            username: true,
+                            avatar: true
+                        }
+                    }
+                },
+
+                orderBy: {
+                    createdAt: "desc"
+                }
+            }),
+
+            prisma.teamJoinRequest.count({
+                where: {
+                    teamId,
+                    userId
+                }
+            })
+        ]);
+
+    return {
+        requests,
+
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
+};
