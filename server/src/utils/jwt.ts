@@ -25,7 +25,7 @@ export const generateResetPasswordToken = (userId:string)=>{
     {userId,purpose:"reset-password"},
     process.env.JWT_RESET_PASSWORD_SECRET!,
     {
-      expiresIn : (process.env.RESET_PASSWORD_TOKEN_EXPIRES ?? '10M') as NonNullable<SignOptions["expiresIn"]>,
+      expiresIn : (process.env.RESET_PASSWORD_TOKEN_EXPIRES ?? '1d') as NonNullable<SignOptions["expiresIn"]>,
     }
   );
 }

@@ -22,7 +22,7 @@ router.use("/organizations/:organizationId/settings",organizationSettingRouter);
 router.use("/organizations/discover",organizationDiscoveryRouter);
 router.use("/organizations/:organizationId/projects",projectRouter);
 router.use("/organizations/:organizationId/teams",teamRouter);
-router.use("organizations/:organizationId/teams/:teamId/dashboard",teamDashboardRoute);
+router.use("/organizations/:organizationId/teams/:teamId/dashboard",teamDashboardRoute);
 router.use("/organizations/:organizationId/:teamId/invitations", teamInvitationRoute);
 
 export default router;

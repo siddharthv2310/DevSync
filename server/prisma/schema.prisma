@@ -77,6 +77,7 @@ model User {
   projectMemberships ProjectMember[]
   oauthAccounts      OAuthAccount[]
   teamMemberships    TeamMember[]
+  teamJoinRequests   TeamJoinRequest[]
 
   teamInvitationRecieved TeamInvitation[]  @relation("TeamInvitationsReceived")
   teamInvitationsSent TeamInvitation[] @relation("TeamInvitationsSent")
@@ -251,6 +252,7 @@ model Team {
 
   members TeamMember[]
   invitations TeamInvitation[]
+  joinRequests TeamJoinRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -311,6 +313,31 @@ model TeamInvitation{
   @@index([expiresAt])
 }
 
+
+model TeamJoinRequest{
+  id String @id @default(uuid())
+
+  teamId String 
+  team Team @relation(fields:[teamId] ,references:[id],onDelete:Cascade)
+
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+
+  message String?
+
+  status TeamJoinRequestStatus @default(PENDING)
+
+  respondedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId,userId])
+  @@index([teamId,status])
+  @@index([userId , status])
+}
+
+
 enum AuthProvider {
   EMAIL
   GOOGLE
@@ -361,4 +388,11 @@ enum TeamInvitationStatus {
   REJECTED
   CANCELLED
   EXPIRED
+}
+
+enum TeamJoinRequestStatus{
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }

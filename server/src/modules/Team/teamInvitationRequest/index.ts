@@ -1,3 +1,3 @@
-import router from "../teamRoutes.js";
+import router from "./teamInvitationRoutes.js";
 
 export default router;
