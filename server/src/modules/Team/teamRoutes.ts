@@ -14,11 +14,11 @@ router.post("/", authMiddleware , organizationMiddleware , requireOrganizationPe
 router.get("/",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.VIEW_TEAMS),getOrganizationTeamsController);
 router.get("/:teamId",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.VIEW_TEAMS),teamMiddleware,getTeamDetailsController);
 router.get( "/:teamId/members",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.VIEW_MEMBERS), getTeamMembersController);
-router.use("/:teamId/members",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.ADD_MEMBERS),addTeamMemberController);
+router.post("/:teamId/members",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.ADD_MEMBERS),addTeamMemberController);
 router.patch("/:teamId/members/:userId/role",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.UPDATE_MEMBER_ROLE),updateTeamMemberRoleController);
 router.delete("/:teamId/members/:userId",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.REMOVE_MEMBERS),removeTeamMemberController);
 router.delete("/:teamId/membership",authMiddleware,organizationMiddleware,teamMiddleware,leaveTeamController);
-router.patch("/:teamId/ownership",authMiddleware,organizationMiddleware,teamMiddleware,transferTeamOwnershipController);
+router.patch("/:teamId/ownership",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.TRANSFER_OWNERSHIP),transferTeamOwnershipController);
 router.patch("/:teamId",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.UPDATE_TEAM),updateTeamController);
 router.patch("/:teamId/archive",authMiddleware,organizationMiddleware,teamMiddleware,requireTeamPermission(teamPermission.ARCHIVE_TEAM),archiveTeamController);
 router.patch("/:teamId/restore",authMiddleware,organizationMiddleware,requireTeamPermission(teamPermission.ARCHIVE_TEAM),restoreTeamController);

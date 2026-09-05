@@ -16,8 +16,6 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
             throw new ApiErrors(401, "Authentication required");
         }
 
-        // console.log("organizationId:", organizationId);
-        // console.log("userId:", userId);
 
         const membership = await prisma.organizationMember.findUnique({
             where:{

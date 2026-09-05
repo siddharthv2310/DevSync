@@ -52,16 +52,34 @@ export const getOrCreateOrganizationConversation = async (organizationId: string
         return getConversationWithMembers(existingConversation.id);
     }
 
-    const conversation = await prisma.conversation.create({
+    const conversation = await prisma.$transaction(async (tx) => {
+    const newConversation = await tx.conversation.create({
         data: {
             type: ConversationType.ORGANIZATION,
             organizationId,
         },
     });
 
+    const organizationMembers = await tx.organizationMember.findMany({
+        where: {
+            organizationId,
+        },
+        select: {
+            userId: true,
+        },
+    });
 
+    await tx.conversationMember.createMany({
+        data: organizationMembers.map((member) => ({
+            conversationId: newConversation.id,
+            userId: member.userId,
+        })),
+    });
 
-    return getConversationWithMembers(conversation.id)
+    return newConversation;
+});
+
+return getConversationWithMembers(conversation.id);
 
 };
 
@@ -113,7 +131,7 @@ export const getOrCreateTeamConversation = async (organizationId: string, teamId
         }
     }
 
-    const existingConversation = await prisma.conversation.findFirst({
+    const existingConversation = await prisma.conversation.findUnique({
         where: {
             teamId,
         },
@@ -217,7 +235,7 @@ export const getOrCreateProjectConversation = async(organizationId:string , proj
 
 }
 
-const createDirectKey = async(userId1 : string , userId2 : string) : Promise<string> =>{
+const createDirectKey = (userId1 : string , userId2 : string) : string =>{
     return [userId1,userId2].sort().join(":");
 };
 
@@ -239,7 +257,7 @@ export const getOrCreateDirectConversation = async(userId : string ,otherUserId:
         throw new ApiErrors(404,"User not found" );
     }
 
-    const directKey  = await createDirectKey(userId , otherUserId) ;
+    const directKey  = createDirectKey(userId , otherUserId) ;
 
     const existingConversation = await prisma. conversation.findUnique({
         where:{

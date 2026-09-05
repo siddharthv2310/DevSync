@@ -2,8 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { OrganizationRole } from "@prisma/client";
 import { ApiErrors } from "../common/errors/ApiErrors.js";
 import { teamPermission } from "../modules/Team/teamPermissions.js";
-import { teamRolePermissions } from "../modules/Team/teamRolePermisssions.js";
-
+import { teamRolePermissions } from "../modules/Team/teamRolePermissions.js";
 
 
 
