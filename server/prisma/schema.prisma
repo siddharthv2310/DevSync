@@ -84,7 +84,6 @@ model User {
   teamInvitationsSent TeamInvitation[] @relation("TeamInvitationsSent")
 
 
-  createConversation Conversation[] @relation("conversationCreator")
   conversationMembers ConversationMember[] @relation("conversationMembers")
   sentMessages Message[]  @relation("messageSender")
   deletedMessages Message[] @relation("messageDeleter")
@@ -359,28 +358,27 @@ model TeamJoinRequest{
   @@index([userId , status])
 }
 
+
+
 model Conversation{
   id String @id @default(uuid())
 
   type ConversationType
 
-  organizationId String?
+  organizationId String? @unique
   organization Organization? @relation(fields :[organizationId] , references:[id] , onDelete:Cascade)
 
-  teamId String?
+  teamId String? @unique
   team Team? @relation(fields:[teamId],references:[id],onDelete:Cascade)
 
-  projectId String
-  project Project @relation(fields : [projectId] , references:[id] , onDelete:Cascade)
+  projectId String? @unique
+  project Project? @relation(fields : [projectId] , references:[id] , onDelete:Cascade)
 
   // Used for 1-to-1 direct messages.
   // Generated from the two user IDs in sorted order.
   directKey String? @unique
 
   name String?
-
-  createdById String?
-  createdBy User? @relation("conversationCreator" , fields :[createdById],references:[id],onDelete:SetNull)
 
   members ConversationMember[]
   messages Message[]
@@ -406,6 +404,11 @@ model ConversationMember{
 
   //for calculating the unread message 
   lastReadAt DateTime?
+
+  joinedAt DateTime @default(now())
+
+  isMuted Boolean @default(false)
+  mutedUntil DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -470,9 +473,8 @@ model MessageReaction{
 
   createdAt DateTime @default(now())
 
-  @@unique([messageId, userId, emoji])
+  @@unique([messageId, userId])
   @@index([messageId])
-  @@index([userId])
 }
 
 model MessageRead{
@@ -513,6 +515,7 @@ model MessageAttachment{
 
   originalName String
   storageKey   String
+
   mimeType     String
   sizeBytes    Int
 
