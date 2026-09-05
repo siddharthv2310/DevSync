@@ -83,6 +83,18 @@ model User {
   teamInvitationRecieved TeamInvitation[]  @relation("TeamInvitationsReceived")
   teamInvitationsSent TeamInvitation[] @relation("TeamInvitationsSent")
 
+
+  createConversation Conversation[] @relation("conversationCreator")
+  conversationMembers ConversationMember[] @relation("conversationMembers")
+  sentMessages Message[]  @relation("messageSender")
+  deletedMessages Message[] @relation("messageDeleter")
+  pinnedMessages Message[]  @relation("messagePinner")
+  messageReactions MessageReaction[] @relation("messageReactions")
+  messageReads MessageRead[] @relation("messageReaders")
+  messageMentions MessageMention[] @relation("messageMentions")
+
+
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -118,6 +130,8 @@ model Organization {
   joinRequests OrganizationJoinRequest[]
   projects     Project[]
   teams        Team[]
+
+  conversations Conversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -210,6 +224,8 @@ model Project {
 
   members ProjectMember[]
 
+  conversations Conversation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -254,6 +270,8 @@ model Team {
   members TeamMember[]
   invitations TeamInvitation[]
   joinRequests TeamJoinRequest[]
+
+  conversations Conversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -346,14 +364,14 @@ model Conversation{
 
   type ConversationType
 
-  orgnizationId String?
+  organizationId String?
   organization Organization? @relation(fields :[organizationId] , references:[id] , onDelete:Cascade)
 
   teamId String?
   team Team? @relation(fields:[teamId],references:[id],onDelete:Cascade)
 
   projectId String
-  project Project @relation(fields : [projectId] , references:[id] , onDelete:cascade)
+  project Project @relation(fields : [projectId] , references:[id] , onDelete:Cascade)
 
   // Used for 1-to-1 direct messages.
   // Generated from the two user IDs in sorted order.
@@ -364,8 +382,8 @@ model Conversation{
   createdById String?
   createdBy User? @relation("conversationCreator" , fields :[createdById],references:[id],onDelete:SetNull)
 
-  members ConversationMembers[]
-  message Message[]
+  members ConversationMember[]
+  messages Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -397,8 +415,114 @@ model ConversationMember{
   @@index([conversationId])
 }
 
+model Message{
+  id String @id @default(uuid())
 
+  conversationId String
+  conversation Conversation @relation(fields:[conversationId],references:[id],onDelete:Cascade)
 
+  senderId String
+  sender User @relation("messageSender" , fields:[senderId],references:[id],onDelete:Cascade)
+
+  type MessageType @default(TEXT)
+
+  content String?
+
+  replyToId String?
+  replyTo Message? @relation("messageReplies",fields:[replyToId],references:[id],onDelete:SetNull)
+  replies Message[] @relation("messageReplies")
+
+  isEdited Boolean   @default(false)
+  editedAt DateTime?
+
+  deleledAt DateTime?
+  deletedById String? 
+  deletedBy User? @relation("messageDeleter", fields:[deletedById],references:[id],onDelete:Cascade)
+
+  pinnedAt DateTime?
+  pinnedById String?
+  pinnedBy User? @relation("messagePinner" , fields:[pinnedById],references:[id],onDelete:Cascade)
+
+  attachments MessageAttachment[]
+  reactions   MessageReaction[]
+  reads       MessageRead[]
+  mentions    MessageMention[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, id])
+  @@index([senderId])
+  @@index([replyToId])
+}
+
+model MessageReaction{
+  id String @id @default(uuid())
+
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation("messageReactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  emoji String
+
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@index([userId])
+}
+
+model MessageRead{
+  id String @id @default(uuid())
+
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation("messageReaders", fields: [userId], references: [id], onDelete: Cascade)
+
+  readAt DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+model MessageMention{
+  id String @id @default(uuid())
+
+  messageId String
+  message Message @relation(fields:[messageId],references:[id],onDelete:Cascade)
+
+  userId String
+  user   User @relation("messageMentions", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([messageId , userId])
+  @@index([userId])
+}
+
+model MessageAttachment{
+  id String @id @default(uuid())
+
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  originalName String
+  storageKey   String
+  mimeType     String
+  sizeBytes    Int
+
+  url          String?
+  thumbnailUrl String?
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+}
 
 
 
@@ -470,7 +594,7 @@ enum ConversationType{
   DIRECT
 }
 
-enum chatType{
+enum MessageType{
   TEXT
   IMAGE
   FILE
