@@ -438,13 +438,13 @@ model Message{
   isEdited Boolean   @default(false)
   editedAt DateTime?
 
-  deleledAt DateTime?
+  deletedAt DateTime?
   deletedById String? 
-  deletedBy User? @relation("messageDeleter", fields:[deletedById],references:[id],onDelete:Cascade)
+  deletedBy User? @relation("messageDeleter", fields:[deletedById],references:[id],onDelete:SetNull)
 
   pinnedAt DateTime?
   pinnedById String?
-  pinnedBy User? @relation("messagePinner" , fields:[pinnedById],references:[id],onDelete:Cascade)
+  pinnedBy User? @relation("messagePinner" , fields:[pinnedById],references:[id],onDelete:SetNull)
 
   attachments MessageAttachment[]
   reactions   MessageReaction[]
