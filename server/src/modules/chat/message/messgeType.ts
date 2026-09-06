@@ -2,7 +2,7 @@ import { MessageType } from "@prisma/client";
 
 export interface CreateMessageInput {
     conversationId: string;
-    type?: MessageType;
+    type: MessageType;
     content?: string;
     replyToId?: string;
 }
@@ -27,6 +27,7 @@ export interface MessageResponse {
     id: string;
     conversationId: string;
     senderId: string;
+
     type: MessageType;
     content: string | null;
 
@@ -36,6 +37,7 @@ export interface MessageResponse {
     editedAt: Date | null;
 
     deletedAt: Date | null;
+    deletedById: string | null;
 
     pinnedAt: Date | null;
     pinnedById: string | null;

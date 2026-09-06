@@ -1,6 +1,17 @@
 import { MessageType } from "@prisma/client";
 import { z } from "zod";
 
+
+export const conversationIdParamSchema = z.object({
+    conversationId: z.string().uuid("Invalid conversation ID"),
+});
+
+
+export const messageIdParamSchema = z.object({
+    messageId: z.string().uuid("Invalid message ID"),
+});
+
+
 export const createMessageSchema = z.object({
     type: z.nativeEnum(MessageType).default(MessageType.TEXT),
 
@@ -16,30 +27,44 @@ export const createMessageSchema = z.object({
         .uuid("Invalid reply message ID")
         .optional(),
 }).superRefine((data, ctx) => {
-    if (data.type === MessageType.TEXT && !data.content) {
+
+    /*
+     * TEXT messages must contain content.
+     */
+    if (
+        data.type === MessageType.TEXT &&
+        !data.content
+    ) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["content"],
-            message: "Text message must contain content",
+            message: "Text message content is required",
         });
     }
 
-    if (
-        data.type !== MessageType.TEXT &&
-        !data.content
-    ) {
-        // Non-text messages may initially have no content.
-        // Attachments will be handled separately.
+    /*
+     * SYSTEM messages must never be created through
+     * the normal user message endpoint.
+     */
+    if (data.type === MessageType.SYSTEM) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["type"],
+            message: "System messages cannot be created directly",
+        });
     }
+
 });
+
 
 export const updateMessageSchema = z.object({
     content: z
         .string()
         .trim()
         .min(1, "Message content cannot be empty")
-        .max(10000, "Message content cannot exceed 10,000 characters"),
+        .max(10000, "Message content cannot exceed 10000 characters"),
 });
+
 
 export const getMessagesQuerySchema = z.object({
     limit: z.coerce
@@ -55,13 +80,6 @@ export const getMessagesQuerySchema = z.object({
         .optional(),
 });
 
-export const messageIdParamSchema = z.object({
-    messageId: z.string().uuid("Invalid message ID"),
-});
-
-export const conversationIdParamSchema = z.object({
-    conversationId: z.string().uuid("Invalid conversation ID"),
-});
 
 export type CreateMessageInput = z.infer<typeof createMessageSchema>;
 export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
