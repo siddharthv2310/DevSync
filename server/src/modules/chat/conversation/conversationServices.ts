@@ -25,12 +25,13 @@ export const getConversationWithMembers = async (conversationId: string) => {
     });
 };
 
-export const getOrCreateOrganizationConversation = async (organizationId: string, userId: string) => {
+export const getOrCreateOrganizationConversation = async ( organizationId: string,userId: string ) => {
+
     const organizationMember = await prisma.organizationMember.findUnique({
         where: {
             organizationId_userId: {
                 organizationId,
-                userId
+                userId,
             },
         },
         select: {
@@ -39,12 +40,16 @@ export const getOrCreateOrganizationConversation = async (organizationId: string
     });
 
     if (!organizationMember) {
-        throw new ApiErrors(403, "You are not a member of this organization");
+        throw new ApiErrors(
+            403,
+            "You are not a member of this organization"
+        );
     }
 
-    const existingConversation = await prisma.conversation.findUnique({
+    const existingConversation = await prisma.conversation.findFirst({
         where: {
             organizationId,
+            type: ConversationType.ORGANIZATION,
         },
     });
 
@@ -52,35 +57,15 @@ export const getOrCreateOrganizationConversation = async (organizationId: string
         return getConversationWithMembers(existingConversation.id);
     }
 
-    const conversation = await prisma.$transaction(async (tx) => {
-    const newConversation = await tx.conversation.create({
+    const conversation = await prisma.conversation.create({
         data: {
             type: ConversationType.ORGANIZATION,
             organizationId,
         },
     });
 
-    const organizationMembers = await tx.organizationMember.findMany({
-        where: {
-            organizationId,
-        },
-        select: {
-            userId: true,
-        },
-    });
-
-    await tx.conversationMember.createMany({
-        data: organizationMembers.map((member) => ({
-            conversationId: newConversation.id,
-            userId: member.userId,
-        })),
-    });
-
-    return newConversation;
-});
-
-return getConversationWithMembers(conversation.id);
-
+    return getConversationWithMembers(conversation.id);
+    
 };
 
 export const getOrCreateTeamConversation = async (organizationId: string, teamId: string, userId: string) => {

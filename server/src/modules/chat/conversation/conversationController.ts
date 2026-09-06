@@ -14,7 +14,7 @@ export const createOrganizationConversation = async (req: Request, res: Response
 
         const { organizationId } = organizationConversationSchema.parse(req.params);
 
-        const conversation = conversationServices.getOrCreateOrganizationConversation(organizationId, userId);
+        const conversation = await conversationServices.getOrCreateOrganizationConversation(organizationId, userId);
 
         return res.status(200).json({
             status: true,
