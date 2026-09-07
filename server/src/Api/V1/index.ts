@@ -11,6 +11,7 @@ import teamDashboardRoute from "../../modules/Team/Dashboard/index.js";
 import teamInvitationRoute from "../../modules/Team/teamInvitationRequest/index.js";
 import teamJoinRequestRoute from "../../modules/Team/teamJoinRequest/index.js";
 import chatConversationRoute from "../../modules/chat/conversation/index.js"
+import chatMessageRoute from "../../modules/chat/message/index.js"
 
 
 const router = Router(); 
@@ -28,5 +29,6 @@ router.use("/organizations/:organizationId/teams/:teamId/dashboard",teamDashboar
 router.use("/organizations/:organizationId/:teamId/invitations", teamInvitationRoute);
 router.use("/organizations/:organizationId/teams/:teamId/join-requests",teamJoinRequestRoute);
 router.use("/chat",chatConversationRoute);
+router.use("/chatMessage",chatMessageRoute);
 
 export default router;
