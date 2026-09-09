@@ -435,6 +435,10 @@ model Message{
   replyTo Message? @relation("messageReplies",fields:[replyToId],references:[id],onDelete:SetNull)
   replies Message[] @relation("messageReplies")
 
+  threadRootId String?
+  threadRoot Message? @relation("messageThreadRoot" , fields:[threadRootId] , references:[id] , onDelete:SetNull)
+  threadMessage Message[] @relation("messageThreadRoot")
+
   isEdited Boolean   @default(false)
   editedAt DateTime?
 

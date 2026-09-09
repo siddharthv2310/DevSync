@@ -10,7 +10,6 @@ router.post("/conversations/:conversationId/messages", authMiddleware,createMess
 
 router.get( "/conversations/:conversationId/messages", authMiddleware, getMessagesController);
 
-
 router.get( "/messages/:messageId", authMiddleware, getMessageController );
 
 router.patch( "/messages/:messageId", authMiddleware, updateMessageController );

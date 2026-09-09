@@ -5,6 +5,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import { requireConversationAccess } from "../chatPermissions.js";
 import { MessageListResponse, MessageResponse } from "./messgeType.js";
 import { CreateMessageInput, GetMessagesQuery, UpdateMessageInput } from "./messageValidation.js";
+import { decodeCursor, encodeCursor } from "../../../utils/cursorPagination.js";
 
 
 
@@ -62,34 +63,29 @@ const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: typeof m
 /**
  * Create a new message.
  */
-export const createMessage = async (userId: string,conversationId: string, input: CreateMessageInput): Promise<MessageResponse> => {
+export const createMessage = async (userId: string,conversationId:string,input: CreateMessageInput): Promise<MessageResponse> => {
 
-    const {type,content,replyToId} = input;
-
-
-
-    // 1. Verify that the user can access the conversation
+    const { type, content,replyToId,} = input;
 
     await requireConversationAccess(conversationId,userId);
-
-
-    // 2. System messages cannot be created by this endpoint
+    
+    // 2. System messages are server-generated
 
     if (type === MessageType.SYSTEM) {
         throw new ApiErrors(400,"System messages cannot be created directly");
     }
 
 
-    // 3. Validate message content
+    // 3. Validate text content
 
-
-    if (type === MessageType.TEXT &&!content?.trim())
-    {
-        throw new ApiErrors( 400,"Text message content is required");
+    if ( type === MessageType.TEXT && !content?.trim()) {
+        throw new ApiErrors(400, "Text message content is required");
     }
 
 
-    // 4. Validate reply message
+    // 4. Determine thread root
+
+    let threadRootId: string;
 
     if (replyToId) {
 
@@ -101,6 +97,7 @@ export const createMessage = async (userId: string,conversationId: string, input
             select: {
                 id: true,
                 conversationId: true,
+                threadRootId: true,
                 deletedAt: true,
             },
         });
@@ -110,33 +107,61 @@ export const createMessage = async (userId: string,conversationId: string, input
             throw new ApiErrors(404,"Reply message not found");
         }
 
+        // Reply must belong to the same conversation
 
-         // A message can only reply to another message in the same conversation.
-         
-        if (replyMessage.conversationId !== conversationId)
-        {
-            throw new ApiErrors( 400, "Cannot reply to a message from another conversation");
+        if ( replyMessage.conversationId !== conversationId) {
+            throw new ApiErrors( 400,"Cannot reply to a message from another conversation");
         }
 
 
-        
-        //We don't allow replying to a deleted message.
-        
+        // Cannot reply to deleted message
+
         if (replyMessage.deletedAt) {
-            throw new ApiErrors(400,"Cannot reply to a deleted message");
+            throw new ApiErrors( 400, "Cannot reply to a deleted message");
         }
+
+
+        
+         // If the target is already part of a thread, inherit that thread's root.
+         // Otherwise the target itself is the root.
+       
+        threadRootId = replyMessage.threadRootId ?? replyMessage.id;
+
+    } 
+    else {
+
+        // This is a root message.
+        // We generate its ID ourselves so that the same ID can be used as both:
+        // id = message ID
+        // threadRootId = thread root ID
+
+        threadRootId = crypto.randomUUID();
     }
 
+    // 5. Generate message ID
+    // if message is reply message then the message id shiuld be different to the reply message Id and 
+    // if not reply message then both should be same 
 
-    // 5. Create message
+    const messageId = replyToId ? crypto.randomUUID() : threadRootId;
+
+
+    // 6. Create message
 
     const message = await prisma.message.create({
         data: {
+            id: messageId,
+
             conversationId,
+
             senderId: userId,
+
             type,
+
             content: content?.trim() || null,
+
             replyToId: replyToId ?? null,
+
+            threadRootId,
         },
 
         include: messageInclude,
@@ -146,26 +171,61 @@ export const createMessage = async (userId: string,conversationId: string, input
     return toMessageResponse(message);
 };
 
-
-//Get messages from a conversation.
-//Newest messages are returned first.
  
-export const getMessages = async ( userId: string, conversationId: string, query: GetMessagesQuery): Promise<MessageListResponse> => {
+export const getMessages = async (userId: string,conversationId: string,query: GetMessagesQuery): Promise<MessageListResponse> => {
 
-    // 1. Authorization
-
-
-    await requireConversationAccess( conversationId,userId );
+    await requireConversationAccess(conversationId,userId);
 
 
-    const {limit,cursor,} = query;
+    const { limit, cursor,} = query;
 
 
-    // 2. Fetch one extra message
+    let decodedCursor:
+        | {
+            createdAt: string;
+            id: string;
+        }
+        | undefined;
+
+
+    if (cursor) {
+        decodedCursor = decodeCursor(cursor);
+    }
+
+
+    const cursorCondition:
+        | Prisma.MessageWhereInput
+        | undefined = decodedCursor
+            ? {
+                OR: [
+                    {
+                        createdAt: {
+                            lt: new Date(
+                                decodedCursor.createdAt
+                            ),
+                        },
+                    },
+                    {
+                        createdAt: new Date(
+                            decodedCursor.createdAt
+                        ),
+
+                        id: {
+                            lt: decodedCursor.id,
+                        },
+                    },
+                ],
+            }
+            : undefined;
+
 
     const messages = await prisma.message.findMany({
         where: {
             conversationId,
+
+            ...(cursorCondition
+                ? cursorCondition
+                : {}),
         },
 
         orderBy: [
@@ -179,21 +239,9 @@ export const getMessages = async ( userId: string, conversationId: string, query
 
         take: limit + 1,
 
-        ...(cursor
-            ? {
-                cursor: {
-                    id: cursor,
-                },
-
-                skip: 1,
-            }
-            : {}),
-
         include: messageInclude,
     });
 
-
-    // 3. Determine whether another page exists
 
     const hasMore = messages.length > limit;
 
@@ -202,18 +250,29 @@ export const getMessages = async ( userId: string, conversationId: string, query
         : messages;
 
 
-    const nextCursor = hasMore
-        ? pageMessages.at(-1)?.id ?? null
-        : null;
+    const lastMessage = pageMessages.at(-1);
+
+
+    const nextCursor =
+        hasMore && lastMessage
+            ? encodeCursor({
+                createdAt:
+                    lastMessage.createdAt.toISOString(),
+
+                id:
+                    lastMessage.id,
+            })
+            : null;
 
 
     return {
         messages: pageMessages.map(toMessageResponse),
+
         nextCursor,
+
         hasMore,
     };
 };
-
 
 
 //Get one message.
@@ -558,3 +617,5 @@ export const deleteMessage = async ( userId: string, messageId: string): Promise
         },
     });
 };
+
+

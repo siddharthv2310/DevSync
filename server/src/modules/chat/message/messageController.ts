@@ -2,27 +2,35 @@ import { Request, Response, NextFunction } from "express";
 
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
-import * as messageServices from"./messageServices.js"
+import * as messageServices from "./messageServices.js"
 
 import { conversationIdParamSchema, createMessageSchema, getMessagesQuerySchema, messageIdParamSchema, updateMessageSchema } from "./messageValidation.js";
 
 
-export const createMessageController = async (req: Request,res: Response,next: NextFunction) => {
+export const createMessageController = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
         const userId = req.user?.userId;
 
         if (!userId) {
-            throw new ApiErrors( 401, "Authentication required");
+            throw new ApiErrors(401, "Authentication required");
         }
 
         const { conversationId } = conversationIdParamSchema.parse(req.params);
 
 
-        const body = createMessageSchema.parse(req.body);
+        const result = createMessageSchema.safeParse(req.body);
+
+        if (!result.success) {
+            throw result.error;
+        }
+
+        const body = result.data;
 
 
-        const message = await messageServices.createMessage( userId,conversationId,body);
+
+
+        const message = await messageServices.createMessage(userId, conversationId, body);
 
 
         return res.status(201).json({
@@ -31,20 +39,20 @@ export const createMessageController = async (req: Request,res: Response,next: N
             data: message,
         });
 
-    } 
+    }
     catch (error) {
         next(error);
     }
 };
 
 
-export const getMessagesController = async (req: Request,res: Response, next: NextFunction) => {
+export const getMessagesController = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
         const userId = req.user?.userId;
 
         if (!userId) {
-            throw new ApiErrors(401,"Authentication required");
+            throw new ApiErrors(401, "Authentication required");
         }
 
 
@@ -54,7 +62,7 @@ export const getMessagesController = async (req: Request,res: Response, next: Ne
         const query = getMessagesQuerySchema.parse(req.query);
 
 
-        const result = await messageServices.getMessages(userId,conversationId,query);
+        const result = await messageServices.getMessages(userId, conversationId, query);
 
 
         return res.status(200).json({
@@ -62,28 +70,28 @@ export const getMessagesController = async (req: Request,res: Response, next: Ne
             data: result,
         });
 
-    } 
+    }
     catch (error) {
         next(error);
     }
 };
 
 
-export const getMessageController = async (req: Request,res: Response,next: NextFunction) => {
+export const getMessageController = async (req: Request, res: Response, next: NextFunction) => {
 
     try {
 
         const userId = req.user?.userId;
 
         if (!userId) {
-            throw new ApiErrors(401,"Authentication required");
+            throw new ApiErrors(401, "Authentication required");
         }
 
 
         const { messageId } = messageIdParamSchema.parse(req.params);
 
 
-        const message = await messageServices.getMessageById(userId,messageId);
+        const message = await messageServices.getMessageById(userId, messageId);
 
 
         return res.status(200).json({
@@ -91,7 +99,7 @@ export const getMessageController = async (req: Request,res: Response,next: Next
             data: message,
         });
 
-    } 
+    }
     catch (error) {
         next(error);
     }
@@ -99,13 +107,13 @@ export const getMessageController = async (req: Request,res: Response,next: Next
 
 
 
-export const updateMessageController = async (req: Request,res: Response,next: NextFunction) => {
+export const updateMessageController = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
         const userId = req.user?.userId;
 
         if (!userId) {
-            throw new ApiErrors(401,"Authentication required");
+            throw new ApiErrors(401, "Authentication required");
         }
 
 
@@ -115,7 +123,7 @@ export const updateMessageController = async (req: Request,res: Response,next: N
         const body = updateMessageSchema.parse(req.body);
 
 
-        const message = await messageServices.updateMessage(userId,messageId,body);
+        const message = await messageServices.updateMessage(userId, messageId, body);
 
 
         return res.status(200).json({
@@ -124,14 +132,14 @@ export const updateMessageController = async (req: Request,res: Response,next: N
             data: message,
         });
 
-    } 
+    }
     catch (error) {
         next(error);
     }
 };
 
 
-export const deleteMessageController = async ( req: Request, res: Response, next: NextFunction) => {
+export const deleteMessageController = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
         const userId = req.user?.userId;
@@ -148,7 +156,7 @@ export const deleteMessageController = async ( req: Request, res: Response, next
             messageIdParamSchema.parse(req.params);
 
 
-        await messageServices.deleteMessage(userId,messageId )
+        await messageServices.deleteMessage(userId, messageId)
 
 
         return res.status(200).json({
@@ -156,7 +164,7 @@ export const deleteMessageController = async ( req: Request, res: Response, next
             message: "Message deleted successfully",
         });
 
-    } 
+    }
     catch (error) {
         next(error);
     }
