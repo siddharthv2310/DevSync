@@ -55,63 +55,57 @@ const toMessageResponse = ( message: MessageWithSender): MessageResponse => {
 };
 
 
-//Get the root message of a thread.
-//The supplied message can be:
-
-//- root message
-//- direct reply
-//- deeply nested reply
  
-export const getThreadRoot = async ( userId: string, messageId: string): Promise<MessageResponse> => {
+// export const getThreadRoot = async ( userId: string, messageId: string): Promise<MessageResponse> => {
 
-    const message = await prisma.message.findUnique({
-        where: {
-            id: messageId,
-        },
+//     const message = await prisma.message.findUnique({
+//         where: {
+//             id: messageId,
+//         },
 
-        select: {
-            id: true,
-            conversationId: true,
-            threadRootId: true,
-        },
-    });
-
-
-    if (!message) {
-        throw new ApiErrors(404, "Message not found");
-    }
+//         select: {
+//             id: true,
+//             conversationId: true,
+//             threadRootId: true,
+//         },
+//     });
 
 
-    await requireConversationAccess( message.conversationId,userId);
+//     if (!message) {
+//         throw new ApiErrors(404, "Message not found");
+//     }
 
 
-    const rootMessageId = message.threadRootId ?? message.id;
+//     await requireConversationAccess( message.conversationId,userId);
 
 
-    const rootMessage = await prisma.message.findUnique({
-        where: {
-            id: rootMessageId,
-        },
-
-        include: messageInclude,
-    });
+//     const rootMessageId = message.threadRootId ?? message.id;
 
 
-    if (!rootMessage) {
-        throw new ApiErrors( 404, "Thread root message not found");
-    }
+//     const rootMessage = await prisma.message.findUnique({
+//         where: {
+//             id: rootMessageId,
+//         },
+
+//         include: messageInclude,
+//     });
 
 
-    // Defensive consistency check.
-    // The root must belong to the same conversation as the requested message.
+//     if (!rootMessage) {
+//         throw new ApiErrors( 404, "Thread root message not found");
+//     }
+
+
+//     // Defensive consistency check.
+//     // The root must belong to the same conversation as the requested message.
     
-    if ( rootMessage.conversationId !== message.conversationId) {
-        throw new ApiErrors( 500, "Invalid thread relationship");
-    }
+//     if ( rootMessage.conversationId !== message.conversationId) {
+//         throw new ApiErrors( 500, "Invalid thread relationship");
+//     }
 
 
-    return toMessageResponse(rootMessage);
-};
+//     return toMessageResponse(rootMessage);
+// };
 
 
 export const getThreadReplies = async (userId: string, messageId: string, limit: number, cursor?: string): Promise<MessageListResponse> => {

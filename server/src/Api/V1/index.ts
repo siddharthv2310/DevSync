@@ -12,6 +12,7 @@ import teamInvitationRoute from "../../modules/Team/teamInvitationRequest/index.
 import teamJoinRequestRoute from "../../modules/Team/teamJoinRequest/index.js";
 import chatConversationRoute from "../../modules/chat/conversation/index.js"
 import chatMessageRoute from "../../modules/chat/message/index.js"
+import threadRoute from "../../modules/chat/threads/index.js"
 
 
 const router = Router(); 
@@ -30,5 +31,6 @@ router.use("/organizations/:organizationId/:teamId/invitations", teamInvitationR
 router.use("/organizations/:organizationId/teams/:teamId/join-requests",teamJoinRequestRoute);
 router.use("/chat",chatConversationRoute);
 router.use("/chatMessage",chatMessageRoute);
+router.use("chat-thread", threadRoute);
 
 export default router;
