@@ -106,3 +106,76 @@ export const removeReaction = async(userId:string , messageId : string ): Promis
         },
     });
 };
+
+export const getMessageReactions = async ( userId: string, messageId: string) => {
+    const message = await prisma.message.findUnique({
+        where: {
+            id: messageId,
+        },
+        select: {
+            id: true,
+            conversationId: true,
+        },
+    });
+
+    if (!message) {
+        throw new ApiErrors(404, "Message not found");
+    }
+
+    await requireConversationAccess( message.conversationId, userId );
+
+    const reactions = await prisma.messageReaction.findMany({
+        where: {
+            messageId,
+        },
+        select: {
+            emoji: true,
+            userId: true,
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    avatar: true,
+                },
+            },
+        },
+    });
+
+    const groupedReactions = new Map<
+      string ,
+      {
+        emoji:string,
+        count:number,
+        reactedByMe:boolean,
+        users:{
+            id:string,
+            name:string,
+            username:string | null,
+            avatar:string | null,
+        }[];
+      }
+    >();
+
+    for (const reaction of reactions) {
+        const existing = groupedReactions.get(reaction.emoji);
+    
+        if (existing) {
+            existing.count += 1;
+            existing.users.push(reaction.user);
+    
+            if (reaction.userId === userId) {
+                existing.reactedByMe = true;
+            }
+        } else {
+            groupedReactions.set(reaction.emoji, {
+                emoji: reaction.emoji,
+                count: 1,
+                reactedByMe: reaction.userId === userId,
+                users: [reaction.user],
+            });
+        }
+    }
+    
+    return Array.from(groupedReactions.values());
+};
