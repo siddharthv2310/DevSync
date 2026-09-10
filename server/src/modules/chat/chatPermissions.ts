@@ -370,3 +370,220 @@ export const canModerateConversationMessage = async (conversationId: string,user
 
     return false;
 };
+
+
+export const validateMentionedUsers = async ( conversationId: string, userIds: string[] ): Promise<void> => {
+
+    if (userIds.length === 0) {
+        return;
+    }
+
+    const conversation = await prisma.conversation.findUnique({
+        where: {
+            id: conversationId,
+        },
+        select: {
+            type: true,
+            organizationId: true,
+            teamId: true,
+            projectId: true,
+        },
+    });
+
+    if (!conversation) {
+        throw new ApiErrors(404, "Conversation not found");
+    }
+
+    const uniqueUserIds = [...new Set(userIds)];
+
+    switch (conversation.type) {
+        case ConversationType.ORGANIZATION: {
+
+            if (!conversation.organizationId) {
+                throw new ApiErrors( 500, "Invalid organization conversation");
+            }
+
+            const members = await prisma.organizationMember.findMany({
+                    where: {
+                        organizationId:
+                            conversation.organizationId,
+                        userId: {
+                            in: uniqueUserIds,
+                        },
+                    },
+                    select: {
+                        userId: true,
+                    },
+                });
+
+            if (members.length !== uniqueUserIds.length) {
+                throw new ApiErrors( 400, "One or more mentioned users are not members of this organization" );
+            }
+
+            return;
+        }
+
+        case ConversationType.TEAM: {
+
+            if (!conversation.teamId) {
+                throw new ApiErrors( 500,"Invalid team conversation" );
+            }
+
+            const team = await prisma.team.findUnique({
+                where: {
+                    id: conversation.teamId,
+                },
+                select: {
+                    organizationId: true,
+                },
+            });
+
+            if (!team) {
+                throw new ApiErrors(404, "Team not found");
+            }
+
+            const members = await prisma.teamMember.findMany({
+                    where: {
+                        teamId: conversation.teamId,
+                        userId: {
+                            in: uniqueUserIds,
+                        },
+                    },
+                    select: {
+                        userId: true,
+                    },
+                });
+
+                const organizationMembers = await prisma.organizationMember.findMany({
+                    where: {
+                        organizationId: team.organizationId,
+                        userId: {
+                            in: uniqueUserIds,
+                        },
+                        role: {
+                            in: [
+                                OrganizationRole.OWNER,
+                                OrganizationRole.ADMIN,
+                            ],
+                        },
+                    },
+                    select: {
+                        userId: true,
+                    },
+                });
+
+            const eligibleUserIds = new Set([
+                ...members.map((member) => member.userId),
+                ...organizationMembers.map((member) => member.userId),
+            ]);
+
+            if ( eligibleUserIds.size !== uniqueUserIds.length) {
+                throw new ApiErrors( 400, "One or more mentioned users cannot be mentioned in this team conversation");
+            }
+
+            return;
+        }
+
+        case ConversationType.PROJECT: {
+
+            if (!conversation.projectId) {
+                throw new ApiErrors( 500, "Invalid project conversation");
+            }
+
+            const project = await prisma.project.findUnique({
+                where: {
+                    id: conversation.projectId,
+                },
+                select: {
+                    organizationId: true,
+                },
+            });
+
+            if (!project) {
+                throw new ApiErrors(404, "Project not found");
+            }
+
+            const projectMembers = await prisma.projectMember.findMany({
+                    where: {
+                        projectId: conversation.projectId,
+                        userId: {
+                            in: uniqueUserIds,
+                        },
+                    },
+                    select: {
+                        userId: true,
+                        role: true,
+                    },
+                });
+
+            const organizationMembers = await prisma.organizationMember.findMany({
+                    where: {
+                        organizationId: project.organizationId,
+                        userId: {
+                            in: uniqueUserIds,
+                        },
+                    },
+                    select: {
+                        userId: true,
+                        role: true,
+                    },
+                });
+
+            // only valid users can be metntioned in the chat;    
+
+            const eligibleUserIds = new Set([
+                ...organizationMembers
+                    .filter(
+                        (member) =>
+                            member.role === OrganizationRole.OWNER ||
+                            member.role === OrganizationRole.ADMIN
+                    )
+                    .map((member) => member.userId),
+
+                ...projectMembers
+                    .filter(
+                        (member) =>
+                            member.role === projectRole.OWNER ||
+                            member.role === projectRole.ADMIN ||
+                            member.role === projectRole.MEMBER
+                    )
+                    .map((member) => member.userId),
+            ]);
+
+            if (
+                eligibleUserIds.size !==
+                uniqueUserIds.length
+            ) {
+                throw new ApiErrors(
+                    400,
+                    "One or more mentioned users cannot be mentioned in this project conversation"
+                );
+            }
+
+            return;
+        }
+
+        case ConversationType.DIRECT: {
+            const members = await prisma.conversationMember.findMany({
+                    where: {
+                        conversationId,
+                        userId: {
+                            in: uniqueUserIds,
+                        },
+                    },
+                    select: {
+                        userId: true,
+                    },
+                });
+
+            if (members.length !== uniqueUserIds.length) {
+                throw new ApiErrors( 400, "One or more mentioned users are not members of this direct conversation");
+            }
+
+            return;
+        }
+
+        default: 
+        throw new ApiErrors(400,"Invalid conversation type");
+    }
+};

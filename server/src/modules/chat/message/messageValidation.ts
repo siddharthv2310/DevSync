@@ -26,6 +26,13 @@ export const createMessageSchema = z.object({
         .string()
         .uuid("Invalid reply message ID")
         .optional(),
+    
+    mentions: z
+        .array(z.string().uuid("Invalid mentioned user ID"))
+        .max(50, "A message cannot mention more than 50 users")
+        .optional(),    
+
+
 }).superRefine((data, ctx) => {
 
     /*

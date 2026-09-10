@@ -5,6 +5,7 @@ export interface CreateMessageInput {
     type: MessageType;
     content?: string;
     replyToId?: string;
+    mentions?: string[];
 }
 
 export interface UpdateMessageInput {
