@@ -21,7 +21,7 @@ router.use("/auth",authRoute);
 router.use("/organization",organizationRoute);
 router.use("/organizations/:organizationId/invitations",invitationsRoute);
 router.use("/invitations", invitationsRoute);
-router.use("/organizations/:organizationId/join-request",joinRequestRoute);
+router.use("/organizations/:organizationId/t",joinRequestRoute);
 router.use("/organizations/:organizationId/settings",organizationSettingRoute);
 router.use("/organizations/discover",organizationDiscoveryRoute);
 router.use("/organizations/:organizationId/projects",projectRoute);
@@ -31,6 +31,6 @@ router.use("/organizations/:organizationId/:teamId/invitations", teamInvitationR
 router.use("/organizations/:organizationId/teams/:teamId/join-requests",teamJoinRequestRoute);
 router.use("/chat",chatConversationRoute);
 router.use("/chatMessage",chatMessageRoute);
-router.use("chat-thread", threadRoute);
+router.use("/chat-thread", threadRoute);
 
 export default router;
