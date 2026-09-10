@@ -1,4 +1,4 @@
-import { ConversationType, OrganizationRole, projectRole } from "@prisma/client";
+import { ConversationType, OrganizationRole, projectRole, TeamRole } from "@prisma/client";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 import prisma from "../../config/prisma.js";
 
@@ -185,4 +185,188 @@ export const requireConversationAccess = async ( conversationId: string, userId:
     if (!allowed) {
         throw new ApiErrors( 403, "You do not have access to this conversation");
     }
+};
+
+
+export const canModerateConversationMessage = async (conversationId: string,userId: string): Promise<boolean> => {
+
+    const conversation = await prisma.conversation.findUnique({
+        where: {
+            id: conversationId,
+        },
+
+        select: {
+            type: true,
+            organizationId: true,
+            teamId: true,
+            projectId: true,
+        },
+    });
+
+
+    if (!conversation) {
+        throw new ApiErrors( 404, "Conversation not found");
+    }
+
+
+    // ORGANIZATION CHAT
+
+    if ( conversation.type === ConversationType.ORGANIZATION) {
+
+        if (!conversation.organizationId) {
+            throw new ApiErrors( 500, "Invalid organization conversation");
+        }
+
+
+        const membership = await prisma.organizationMember.findUnique({
+                where: {
+                    organizationId_userId: {
+                        organizationId: conversation.organizationId,
+                        userId,
+                    },
+                },
+                select: {
+                    role: true,
+                },
+            });
+
+
+        return ( membership?.role === OrganizationRole.OWNER ||  membership?.role === OrganizationRole.ADMIN);
+    }
+
+
+    // TEAM CHAT
+
+    if ( conversation.type === ConversationType.TEAM ) {
+
+        if (!conversation.teamId) {
+            throw new ApiErrors( 500, "Invalid team conversation" );
+        }
+
+        const team = await prisma.team.findUnique({
+            where: {
+                id: conversation.teamId,
+            },
+
+            select: {
+                organizationId: true,
+            },
+        });
+
+
+        if (!team) {
+            throw new ApiErrors( 404, "Team not found");
+        }
+
+
+        // Organization OWNER / ADMIN
+        const organizationMembership = await prisma.organizationMember.findUnique({
+                where: {
+                    organizationId_userId: {
+                        organizationId:
+                            team.organizationId,
+                        userId,
+                    },
+                },
+
+                select: {
+                    role: true,
+                },
+            });
+
+
+        if (organizationMembership?.role === OrganizationRole.OWNER ||  organizationMembership?.role === OrganizationRole.ADMIN ) 
+        {
+            return true;
+        }
+
+
+        // Team OWNER / ADMIN
+        const teamMembership = await prisma.teamMember.findUnique({
+                where: {
+                    teamId_userId: {
+                        teamId: conversation.teamId,
+                        userId,
+                    },
+                },
+
+                select: {
+                    role: true,
+                },
+            });
+
+
+        return ( teamMembership?.role === TeamRole.OWNER ||  teamMembership?.role === TeamRole.ADMIN);
+    }
+
+
+    // PROJECT CHAT
+
+    if ( conversation.type === ConversationType.PROJECT) 
+    {
+
+        if (!conversation.projectId) {
+            throw new ApiErrors( 500, "Invalid project conversation");
+        }
+
+
+        const project = await prisma.project.findUnique({
+            where: {
+                id: conversation.projectId,
+            },
+
+            select: {
+                organizationId: true,
+            },
+        });
+
+
+        if (!project) {
+            throw new ApiErrors( 404, "Project not found");
+        }
+
+
+        // Organization OWNER / ADMIN
+        const organizationMembership =  await prisma.organizationMember.findUnique({
+                where: {
+                    organizationId_userId: {
+                        organizationId:
+                            project.organizationId,
+                        userId,
+                    },
+                },
+
+                select: {
+                    role: true,
+                },
+            });
+
+            if (organizationMembership?.role === OrganizationRole.OWNER ||  organizationMembership?.role === OrganizationRole.ADMIN ) 
+                {
+                    return true;
+                }
+
+
+        // Project OWNER / ADMIN
+        const projectMembership = await prisma.projectMember.findUnique({
+                where: {
+                    projectId_userId: {
+                        projectId: conversation.projectId,
+                        userId,
+                    },
+                },
+
+                select: {
+                    role: true,
+                },
+            });
+
+
+        return ( projectMembership?.role === projectRole.OWNER || projectMembership?.role === projectRole.ADMIN );
+    }
+
+
+    // DIRECT CHAT
+
+    return false;
 };
