@@ -8,6 +8,22 @@ export interface CreateMessageInput {
     mentions?: string[];
 }
 
+export interface MessageMentionInput {
+    userId: string;
+    username: string;
+}
+
+export interface MessageMentionResponse {
+    id: string;
+    userId: string;
+    user: {
+        id: string;
+        name: string;
+        username: string | null;
+        avatar: string | null;
+    };
+}
+
 export interface UpdateMessageInput {
     content: string;
 }
@@ -47,6 +63,8 @@ export interface MessageResponse {
     updatedAt: Date;
 
     sender: MessageSender;
+
+    mentions: MessageMentionResponse[];
 }
 
 export interface MessageListResponse {

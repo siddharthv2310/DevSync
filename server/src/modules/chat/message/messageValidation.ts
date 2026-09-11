@@ -12,6 +12,14 @@ export const messageIdParamSchema = z.object({
 });
 
 
+const mentionSchema = z.object({
+    userId: z.string().uuid("Invalid mentioned user ID"),
+    username: z
+        .string()
+        .trim()
+        .min(1, "Mention username is required"),
+});
+
 export const createMessageSchema = z.object({
     type: z.nativeEnum(MessageType).default(MessageType.TEXT),
 
@@ -28,7 +36,7 @@ export const createMessageSchema = z.object({
         .optional(),
     
     mentions: z
-        .array(z.string().uuid("Invalid mentioned user ID"))
+        .array(mentionSchema)
         .max(50, "A message cannot mention more than 50 users")
         .optional(),    
 

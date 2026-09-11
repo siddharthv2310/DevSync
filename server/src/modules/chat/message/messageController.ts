@@ -27,9 +27,6 @@ export const createMessageController = async (req: Request, res: Response, next:
 
         const body = result.data;
 
-
-
-
         const message = await messageServices.createMessage(userId, conversationId, body);
 
 

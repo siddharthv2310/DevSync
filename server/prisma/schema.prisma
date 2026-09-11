@@ -403,6 +403,7 @@ model ConversationMember{
   user User @relation("conversationMembers",fields:[userId] , references:[id],onDelete:Cascade)
 
   //for calculating the unread message 
+  lastReadMessageId String?
   lastReadAt DateTime?
 
   joinedAt DateTime @default(now())

@@ -2,7 +2,7 @@ import { MessageType, Prisma,} from "@prisma/client";
 
 import prisma from "../../../config/prisma.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
-import { canModerateConversationMessage, requireConversationAccess } from "../chatPermissions.js";
+import { canModerateConversationMessage, requireConversationAccess, validateMentionedUsers } from "../chatPermissions.js";
 import { MessageListResponse, MessageResponse } from "./messgeType.js";
 import { CreateMessageInput, GetMessagesQuery, UpdateMessageInput } from "./messageValidation.js";
 import { decodeCursor, encodeCursor } from "../../../utils/cursorPagination.js";
@@ -26,6 +26,20 @@ const messageInclude = {
     sender: {
         select: messageSenderSelect,
     },
+    mentions:{
+        select:{
+            id:true,
+            userId:true,
+            user:{
+                select:{
+                    id: true,
+                    name: true,
+                    username: true,
+                    avatar: true,
+                }
+            }
+        }
+    }
 } satisfies Prisma.MessageInclude;
 
 
@@ -56,117 +70,142 @@ const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: typeof m
         updatedAt: message.updatedAt,
 
         sender: message.sender,
+        mentions: message.mentions,
     };
 };
 
 
-/**
- * Create a new message.
- */
-export const createMessage = async (userId: string,conversationId:string,input: CreateMessageInput): Promise<MessageResponse> => {
+export const createMessage = async (userId: string,conversationId: string,input: CreateMessageInput): Promise<MessageResponse> => {
 
-    const { type, content,replyToId,} = input;
+    const {type,content,replyToId,mentions,} = input;
 
-    await requireConversationAccess(conversationId,userId);
-    
+    // 1. Check conversation access
+    await requireConversationAccess( conversationId, userId);
+
     // 2. System messages are server-generated
-
     if (type === MessageType.SYSTEM) {
-        throw new ApiErrors(400,"System messages cannot be created directly");
+        throw new ApiErrors(
+            400,
+            "System messages cannot be created directly"
+        );
     }
-
 
     // 3. Validate text content
-
-    if ( type === MessageType.TEXT && !content?.trim()) {
-        throw new ApiErrors(400, "Text message content is required");
+    if (type === MessageType.TEXT && !content?.trim()) {
+        throw new ApiErrors(
+            400,
+            "Text message content is required"
+        );
     }
 
+    // 4. Remove duplicate mentions
+    const uniqueMentions = Array.from(
+        new Map(
+            (mentions ?? []).map((mention) => [
+                mention.userId,
+                mention,
+            ])
+        ).values()
+    );
 
-    // 4. Determine thread root
+    // 5. Validate mentioned users
+    if (uniqueMentions.length > 0) {
+        await validateMentionedUsers(
+            conversationId,
+            content?.trim() ?? "",
+            uniqueMentions
+        );
+    }
 
+    // 6. Determine thread root
     let threadRootId: string;
 
     if (replyToId) {
 
-        const replyMessage = await prisma.message.findUnique({
-            where: {
-                id: replyToId,
-            },
-
-            select: {
-                id: true,
-                conversationId: true,
-                threadRootId: true,
-                deletedAt: true,
-            },
-        });
-
+        const replyMessage =
+            await prisma.message.findUnique({
+                where: {
+                    id: replyToId,
+                },
+                select: {
+                    id: true,
+                    conversationId: true,
+                    threadRootId: true,
+                    deletedAt: true,
+                },
+            });
 
         if (!replyMessage) {
-            throw new ApiErrors(404,"Reply message not found");
+            throw new ApiErrors(
+                404,
+                "Reply message not found"
+            );
         }
 
         // Reply must belong to the same conversation
-
         if ( replyMessage.conversationId !== conversationId) {
-            throw new ApiErrors( 400,"Cannot reply to a message from another conversation");
+            throw new ApiErrors(
+                400,
+                "Cannot reply to a message from another conversation"
+            );
         }
-
 
         // Cannot reply to deleted message
-
         if (replyMessage.deletedAt) {
-            throw new ApiErrors( 400, "Cannot reply to a deleted message");
+            throw new ApiErrors(
+                400,
+                "Cannot reply to a deleted message"
+            );
         }
 
-
-        
-         // If the target is already part of a thread, inherit that thread's root.
-         // Otherwise the target itself is the root.
-       
+        // Inherit thread root
         threadRootId = replyMessage.threadRootId ?? replyMessage.id;
 
-    } 
-    else {
+    } else {
 
-        // This is a root message.
-        // We generate its ID ourselves so that the same ID can be used as both:
-        // id = message ID
-        // threadRootId = thread root ID
-
+        // Root message
         threadRootId = crypto.randomUUID();
     }
 
-    // 5. Generate message ID
-    // if message is reply message then the message id shiuld be different to the reply message Id and 
-    // if not reply message then both should be same 
+    // 7. Generate message ID
+    const messageId = replyToId ? crypto.randomUUID()  : threadRootId;
 
-    const messageId = replyToId ? crypto.randomUUID() : threadRootId;
+    // 8. Create message + mentions atomically
+    const message = await prisma.$transaction( async (tx) => {
 
+            const createdMessage =
+                await tx.message.create({
+                    data: {
+                        id: messageId,
+                        conversationId,
+                        senderId: userId,
+                        type,
+                        content:
+                            content?.trim() || null,
+                        replyToId:
+                            replyToId ?? null,
+                        threadRootId,
+                    },
+                    include: messageInclude,
+                });
 
-    // 6. Create message
+            if (uniqueMentions.length > 0) {
 
-    const message = await prisma.message.create({
-        data: {
-            id: messageId,
+                await tx.messageMention.createMany({
+                    data: uniqueMentions.map(
+                        (mention) => ({
+                            messageId:
+                                createdMessage.id,
+                            userId:
+                                mention.userId,
+                        })
+                    ),
+                });
+            }
 
-            conversationId,
-
-            senderId: userId,
-
-            type,
-
-            content: content?.trim() || null,
-
-            replyToId: replyToId ?? null,
-
-            threadRootId,
-        },
-
-        include: messageInclude,
-    });
-
+            return createdMessage;
+        }
+    );
 
     return toMessageResponse(message);
 };
