@@ -21,3 +21,7 @@ export const directConversationSchema = z.object({
 export const conversationSchema = z.object({
     conversationId: z.string().uuid(),
 });
+
+export const markConversationReadSchema = z.object({
+    messageId: z.string().uuid("Invalid message ID"),
+});

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import * as conversationServices from "./conversationServices.js";
 import { requireConversationAccess } from "../chatPermissions.js";
-import { conversationSchema, directConversationSchema, organizationConversationSchema, projectConversationSchema, teamConversationSchema } from "./conversationValidation.js";
+import { conversationSchema, directConversationSchema, markConversationReadSchema, organizationConversationSchema, projectConversationSchema, teamConversationSchema } from "./conversationValidation.js";
 
 export const createOrganizationConversation = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -129,6 +129,30 @@ export const getConversation = async (req: Request,res: Response,next: NextFunct
             data: conversation,
         });
 
+    } 
+    catch (error) {
+        next(error);
+    }
+};
+
+export const markConversationAsRead = async ( req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors(401, "Authentication required");
+        }
+
+        const { conversationId } = conversationSchema.parse(req.params);
+
+        const { messageId } = markConversationReadSchema.parse(req.body);
+
+        await conversationServices.markConversationAsRead( conversationId, userId, messageId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Conversation marked as read",
+        });
     } 
     catch (error) {
         next(error);

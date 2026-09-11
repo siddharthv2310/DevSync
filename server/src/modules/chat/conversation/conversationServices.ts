@@ -2,6 +2,7 @@ import { ConversationType, OrganizationRole, projectRole } from "@prisma/client"
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import prisma from "../../../config/prisma.js";
 import { Prisma } from "@prisma/client";
+import { requireConversationAccess } from "../chatPermissions.js";
 
 export const getConversationWithMembers = async (conversationId: string) => {
     return await prisma.conversation.findUnique({
@@ -351,3 +352,87 @@ export const getOrCreateDirectConversation = async(userId : string ,otherUserId:
     }
 
 }
+
+
+export const markConversationAsRead = async ( conversationId: string, userId: string, messageId: string) => {
+
+    await requireConversationAccess(conversationId, userId);
+
+
+    const message = await prisma.message.findFirst({
+        where: {
+            id: messageId,
+            conversationId,
+            deletedAt: null,
+        },
+        select: {
+            id: true,
+            createdAt: true,
+        },
+    });
+
+    if (!message) {
+        throw new ApiErrors( 404, "Message not found in this conversation");
+    }
+
+    const currentReadState = await prisma.conversationReadState.findUnique({
+            where: {
+                conversationId_userId: {
+                    conversationId,
+                    userId,
+                },
+            },
+            select: {
+                lastReadMessageId: true,
+            },
+        });
+
+    // 4. If the user already has a read position, make sure we never move it backwards.
+
+    if (currentReadState?.lastReadMessageId) {
+        const currentMessage = await prisma.message.findUnique({
+            where: {
+                id: currentReadState.lastReadMessageId,
+            },
+            select: {
+                createdAt: true,
+                id: true,
+            },
+        });
+
+        if (currentMessage) {
+            const isOlder = message.createdAt < currentMessage.createdAt ||
+                (
+                    message.createdAt.getTime() ===
+                    currentMessage.createdAt.getTime() &&
+                    message.id < currentMessage.id
+                );
+
+            if (isOlder) {
+                return;
+            }
+        }
+    }
+
+ 
+    await prisma.conversationReadState.upsert({
+        where: {
+            conversationId_userId: {
+                conversationId,
+                userId,
+            },
+        },
+
+        create: {
+            conversationId,
+            userId,
+            lastReadMessageId: message.id,
+            lastReadAt: new Date(),
+        },
+
+        update: {
+            lastReadMessageId: message.id,
+            lastReadAt: new Date(),
+        },
+    });
+};

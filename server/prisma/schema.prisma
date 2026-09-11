@@ -79,6 +79,7 @@ model User {
   teamMemberships    TeamMember[]
   teamJoinRequests   TeamJoinRequest[]
   reviewedTeamJoinRequest TeamJoinRequest[] @relation("teamJoinRequestReviewer")
+  conversationReadStates ConversationReadState[]
 
   teamInvitationRecieved TeamInvitation[]  @relation("TeamInvitationsReceived")
   teamInvitationsSent TeamInvitation[] @relation("TeamInvitationsSent")
@@ -382,6 +383,7 @@ model Conversation{
 
   members ConversationMember[]
   messages Message[]
+  readStates ConversationReadState[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -402,14 +404,30 @@ model ConversationMember{
   userId String
   user User @relation("conversationMembers",fields:[userId] , references:[id],onDelete:Cascade)
 
-  //for calculating the unread message 
-  lastReadMessageId String?
-  lastReadAt DateTime?
-
   joinedAt DateTime @default(now())
 
   isMuted Boolean @default(false)
   mutedUntil DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model ConversationReadState {
+  id String @id @default(uuid())
+
+  conversationId String
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lastReadMessageId String?
+  lastReadAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -531,7 +549,6 @@ model MessageAttachment{
 
   @@index([messageId])
 }
-
 
 
 

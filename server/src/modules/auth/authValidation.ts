@@ -40,8 +40,8 @@ export const githubCallbackSchema = z.object({
   state: z.string().min(1, "OAuth state is required"),
 });
 
-export const registerSchema = z
-  .object({
+export const registerSchema = z.object({
+  
     name: z.string().trim().min(2, "Name must be at least 2 characters"),
 
     username: z

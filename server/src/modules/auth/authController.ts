@@ -46,11 +46,8 @@ export const login = async (req: Request, res: Response) => {
     }
 };
 
-export const registerController = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+export const registerController = async ( req: Request,res: Response,next: NextFunction) => {
+    
     const result = registerSchema.safeParse(req.body);
   
     if (!result.success) {
