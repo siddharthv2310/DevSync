@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../../middlewares/authMiddleware.js";
 import { organizationMiddleware } from "../../../middlewares/organizationMiddleware.js";
-import { createDirectConversation, createOrganizationConversation, createProjectConversation, createTeamConversation, getConversation, markConversationAsRead } from "./conversationController.js";
+import { createDirectConversation, createOrganizationConversation, createProjectConversation, createTeamConversation, getConversation, getUnreadCount, getUnreadMessages, markConversationAsRead } from "./conversationController.js";
 
 
 const router = Router();
@@ -17,6 +17,10 @@ router.post( "/conversations/direct", authMiddleware, createDirectConversation )
 router.get( "/conversations/:conversationId",authMiddleware,getConversation );
 
 router.post( "/conversations/:conversationId/read", authMiddleware, markConversationAsRead);
+
+router.get( "/conversations/:conversationId/unread-count", authMiddleware, getUnreadCount);
+
+router.get("/conversations/:conversationId/unread-messages",authMiddleware,getUnreadMessages);
 
 
 

@@ -25,3 +25,14 @@ export const conversationSchema = z.object({
 export const markConversationReadSchema = z.object({
     messageId: z.string().uuid("Invalid message ID"),
 });
+
+export const unreadMessagesQuerySchema = z.object({
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(30),
+
+    cursor: z.string().min(1).optional(),
+});

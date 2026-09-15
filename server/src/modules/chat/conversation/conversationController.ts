@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import * as conversationServices from "./conversationServices.js";
 import { requireConversationAccess } from "../chatPermissions.js";
-import { conversationSchema, directConversationSchema, markConversationReadSchema, organizationConversationSchema, projectConversationSchema, teamConversationSchema } from "./conversationValidation.js";
+import { conversationSchema, directConversationSchema, markConversationReadSchema, organizationConversationSchema, projectConversationSchema, teamConversationSchema, unreadMessagesQuerySchema } from "./conversationValidation.js";
 
 export const createOrganizationConversation = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -152,6 +152,57 @@ export const markConversationAsRead = async ( req: Request, res: Response, next:
         return res.status(200).json({
             success: true,
             message: "Conversation marked as read",
+        });
+    } 
+    catch (error) {
+        next(error);
+    }
+};
+
+export const getUnreadCount = async ( req: Request, res: Response,next: NextFunction ) => {
+
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors(401, "Authentication required");
+        }
+
+        const { conversationId } = conversationSchema.parse(req.params);
+
+        const unreadCount = await conversationServices.getUnreadCount(conversationId,userId);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                unreadCount,
+            },
+        });
+    } 
+    catch (error) {
+        next(error);
+    }
+};
+
+
+export const getUnreadMessages = async ( req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+
+            throw new ApiErrors(401,"Authentication required");
+        }
+
+        const { conversationId } = conversationSchema.parse(req.params);
+
+        const { limit, cursor } = unreadMessagesQuerySchema.parse(req.query);
+
+        const result = await conversationServices.getUnreadMessages( conversationId, userId, limit, cursor);
+
+        return res.status(200).json({
+            success: true,
+            data: result,
         });
     } 
     catch (error) {

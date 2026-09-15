@@ -1,4 +1,4 @@
-import { MessageType, Prisma,} from "@prisma/client";
+import { MessageType, Prisma, } from "@prisma/client";
 
 import prisma from "../../../config/prisma.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
@@ -11,8 +11,8 @@ import { decodeCursor, encodeCursor } from "../../../utils/cursorPagination.js";
 
 
 //Only expose the User fields that are safe and useful for the chat response.
- 
-const messageSenderSelect = {
+
+export const messageSenderSelect = {
     id: true,
     name: true,
     username: true,
@@ -22,16 +22,16 @@ const messageSenderSelect = {
 
 
 // Common include used whenever we return a message.
-const messageInclude = {
+export const messageInclude = {
     sender: {
         select: messageSenderSelect,
     },
-    mentions:{
-        select:{
-            id:true,
-            userId:true,
-            user:{
-                select:{
+    mentions: {
+        select: {
+            id: true,
+            userId: true,
+            user: {
+                select: {
                     id: true,
                     name: true,
                     username: true,
@@ -46,7 +46,7 @@ const messageInclude = {
 /*
  * Convert Prisma's Message object into our public API response.
  */
-const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: typeof messageInclude;}>): MessageResponse => {
+export const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: typeof messageInclude; }>): MessageResponse => {
     return {
         id: message.id,
         conversationId: message.conversationId,
@@ -75,12 +75,12 @@ const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: typeof m
 };
 
 
-export const createMessage = async (userId: string,conversationId: string,input: CreateMessageInput): Promise<MessageResponse> => {
+export const createMessage = async (userId: string, conversationId: string, input: CreateMessageInput): Promise<MessageResponse> => {
 
-    const {type,content,replyToId,mentions,} = input;
+    const { type, content, replyToId, mentions, } = input;
 
     // 1. Check conversation access
-    await requireConversationAccess( conversationId, userId);
+    await requireConversationAccess(conversationId, userId);
 
     // 2. System messages are server-generated
     if (type === MessageType.SYSTEM) {
@@ -143,7 +143,7 @@ export const createMessage = async (userId: string,conversationId: string,input:
         }
 
         // Reply must belong to the same conversation
-        if ( replyMessage.conversationId !== conversationId) {
+        if (replyMessage.conversationId !== conversationId) {
             throw new ApiErrors(
                 400,
                 "Cannot reply to a message from another conversation"
@@ -168,55 +168,50 @@ export const createMessage = async (userId: string,conversationId: string,input:
     }
 
     // 7. Generate message ID
-    const messageId = replyToId ? crypto.randomUUID()  : threadRootId;
+    const messageId = replyToId ? crypto.randomUUID() : threadRootId;
 
     // 8. Create message + mentions atomically
-    const message = await prisma.$transaction( async (tx) => {
+    const message = await prisma.$transaction(async (tx) => {
+        await tx.message.create({
+            data: {
+                id: messageId,
+                conversationId,
+                senderId: userId,
+                type,
+                content: content?.trim() || null,
+                replyToId: replyToId ?? null,
+                threadRootId,
+            },
+        });
 
-            const createdMessage =
-                await tx.message.create({
-                    data: {
-                        id: messageId,
-                        conversationId,
-                        senderId: userId,
-                        type,
-                        content:
-                            content?.trim() || null,
-                        replyToId:
-                            replyToId ?? null,
-                        threadRootId,
-                    },
-                    include: messageInclude,
-                });
-
-            if (uniqueMentions.length > 0) {
-
-                await tx.messageMention.createMany({
-                    data: uniqueMentions.map(
-                        (mention) => ({
-                            messageId:
-                                createdMessage.id,
-                            userId:
-                                mention.userId,
-                        })
-                    ),
-                });
-            }
-
-            return createdMessage;
+        if (uniqueMentions.length > 0) {
+            await tx.messageMention.createMany({
+                data: uniqueMentions.map((mention) => ({
+                    messageId,
+                    userId: mention.userId,
+                })),
+            });
         }
-    );
+
+        return tx.message.findUniqueOrThrow({
+            where: {
+                id: messageId,
+            },
+            include: messageInclude,
+        });
+    });
+
 
     return toMessageResponse(message);
 };
 
- 
-export const getMessages = async (userId: string,conversationId: string,query: GetMessagesQuery): Promise<MessageListResponse> => {
 
-    await requireConversationAccess(conversationId,userId);
+export const getMessages = async (userId: string, conversationId: string, query: GetMessagesQuery): Promise<MessageListResponse> => {
+
+    await requireConversationAccess(conversationId, userId);
 
 
-    const { limit, cursor,} = query;
+    const { limit, cursor, } = query;
 
 
     let decodedCursor:
@@ -315,7 +310,7 @@ export const getMessages = async (userId: string,conversationId: string,query: G
 
 
 //Get one message.
-export const getMessageById = async ( userId: string,  messageId: string): Promise<MessageResponse> => {
+export const getMessageById = async (userId: string, messageId: string): Promise<MessageResponse> => {
 
     const message = await prisma.message.findUnique({
         where: {
@@ -327,11 +322,11 @@ export const getMessageById = async ( userId: string,  messageId: string): Promi
 
 
     if (!message) {
-        throw new ApiErrors( 404, "Message not found");
+        throw new ApiErrors(404, "Message not found");
     }
 
 
-    await requireConversationAccess(message.conversationId,userId);
+    await requireConversationAccess(message.conversationId, userId);
 
 
     return toMessageResponse(message);
@@ -340,7 +335,7 @@ export const getMessageById = async ( userId: string,  messageId: string): Promi
 
 // Edit a message.
 // Only the original sender can edit their message.
-export const updateMessage = async (userId: string,messageId: string,input: UpdateMessageInput): Promise<MessageResponse> => {
+export const updateMessage = async (userId: string, messageId: string, input: UpdateMessageInput): Promise<MessageResponse> => {
 
     const message = await prisma.message.findUnique({
         where: {
@@ -358,33 +353,33 @@ export const updateMessage = async (userId: string,messageId: string,input: Upda
 
 
     if (!message) {
-        throw new ApiErrors( 404, "Message not found");
+        throw new ApiErrors(404, "Message not found");
     }
 
 
     // 1. User must have conversation access
 
-    await requireConversationAccess( message.conversationId, userId);
+    await requireConversationAccess(message.conversationId, userId);
 
 
     // 2. Only sender can edit
 
     if (message.senderId !== userId) {
-        throw new ApiErrors( 403, "You can only edit your own messages");
+        throw new ApiErrors(403, "You can only edit your own messages");
     }
 
 
     // 3. Deleted messages cannot be edited
 
     if (message.deletedAt) {
-        throw new ApiErrors( 400, "Deleted messages cannot be edited");
+        throw new ApiErrors(400, "Deleted messages cannot be edited");
     }
 
 
     // 4. Only text messages can currently be edited
 
     if (message.type !== MessageType.TEXT) {
-        throw new ApiErrors( 400, "Only text messages can be edited");
+        throw new ApiErrors(400, "Only text messages can be edited");
     }
 
 
@@ -409,7 +404,7 @@ export const updateMessage = async (userId: string,messageId: string,input: Upda
 };
 
 
-export const deleteMessage = async ( userId: string, messageId: string): Promise<void> => {
+export const deleteMessage = async (userId: string, messageId: string): Promise<void> => {
 
     // 1. Find message
 
@@ -428,13 +423,13 @@ export const deleteMessage = async ( userId: string, messageId: string): Promise
 
 
     if (!message) {
-        throw new ApiErrors( 404, "Message not found");
+        throw new ApiErrors(404, "Message not found");
     }
 
 
     // 2. Verify conversation access
 
-    await requireConversationAccess(message.conversationId,userId);
+    await requireConversationAccess(message.conversationId, userId);
 
     // 3. Already deleted
 
@@ -443,16 +438,16 @@ export const deleteMessage = async ( userId: string, messageId: string): Promise
     }
 
 
-    const isSender =  message.senderId === userId;
+    const isSender = message.senderId === userId;
 
 
     if (!isSender) {
 
-        const canModerate = await canModerateConversationMessage( message.conversationId, userId);
+        const canModerate = await canModerateConversationMessage(message.conversationId, userId);
 
 
         if (!canModerate) {
-            throw new ApiErrors(403,"You do not have permission to delete this message" );
+            throw new ApiErrors(403, "You do not have permission to delete this message");
         }
     }
 
