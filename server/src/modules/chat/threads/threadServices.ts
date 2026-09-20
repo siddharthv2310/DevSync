@@ -18,6 +18,13 @@ const messageInclude = {
     sender: {
         select: messageSenderSelect,
     },
+    mentions: {
+        include: {
+            user: {
+                select: messageSenderSelect,
+            },
+        },
+    },
 } satisfies Prisma.MessageInclude;
 
 
@@ -51,6 +58,7 @@ const toMessageResponse = ( message: MessageWithSender): MessageResponse => {
         updatedAt: message.updatedAt,
 
         sender: message.sender,
+        mentions : message.mentions,
     };
 };
 

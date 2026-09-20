@@ -6,6 +6,8 @@ import { canModerateConversationMessage, requireConversationAccess, validateMent
 import { MessageListResponse, MessageResponse } from "./messgeType.js";
 import { CreateMessageInput, GetMessagesQuery, UpdateMessageInput } from "./messageValidation.js";
 import { decodeCursor, encodeCursor } from "../../../utils/cursorPagination.js";
+import { publishEvent } from "../../../realtime/redis/redisPubSub.js";
+import { REALTIME_CHANNELS } from "../../../realtime/socketEvents.js";
 
 
 
@@ -200,6 +202,22 @@ export const createMessage = async (userId: string, conversationId: string, inpu
             include: messageInclude,
         });
     });
+
+    try {
+        await publishEvent(
+            REALTIME_CHANNELS.MESSAGE_CREATED,
+            {
+                conversationId,
+                message: toMessageResponse(message),
+            }
+        );
+    } 
+    catch (error) {
+        console.error(
+            "Failed to publish message realtime event:",
+            error
+        );
+    }
 
 
     return toMessageResponse(message);
