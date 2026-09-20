@@ -24,7 +24,7 @@ export const createSocketServer = (httpServer: HttpServer) => {
 
     
 
-    io.on("conection",(socket)=>{
+    io.on("connection",(socket)=>{
         const authenticatedSocket = socket as authenticatedSocket;
 
         handleConnection(io , authenticatedSocket)
