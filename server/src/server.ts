@@ -3,7 +3,7 @@ import app from './app.js';
 import {env} from './config/env.js';
 import { connectRedis } from './config/redis.js';
 import { createSocketServer } from './realtime/socketServer.js';
-
+import "./config/testS3.js";
 
 const startServer = async () => {
     try {

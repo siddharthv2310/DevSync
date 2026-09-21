@@ -21,55 +21,48 @@ const mentionSchema = z.object({
 });
 
 export const createMessageSchema = z.object({
+    
     type: z.nativeEnum(MessageType).default(MessageType.TEXT),
 
-    content: z
-        .string()
-        .trim()
-        .min(1, "Message content cannot be empty")
-        .max(10000, "Message content cannot exceed 10,000 characters")
-        .optional(),
+    content: z.string().trim().max(10000).optional(),
 
-    replyToId: z
-        .string()
-        .uuid("Invalid reply message ID")
-        .optional(),
-    
+    replyToId: z.string().uuid().optional(),
+
     mentions: z
-        .array(mentionSchema)
-        .max(50, "A message cannot mention more than 50 users")
-        .optional(),    
+        .array(
+            z.object({
+                userId: z.string().uuid(),
+                username: z.string().trim().min(1),
+            })
+        )
+        .max(50)
+        .optional(),
 
+    attachmentUploadIds: z
+        .array(z.string().uuid())
+        .max(10)
+        .optional(),
+})
+    .superRefine((data, ctx) => {
+        const hasContent = !!data.content?.trim();
+        const hasAttachments = !!data.attachmentUploadIds?.length;
 
-}).superRefine((data, ctx) => {
+        if (!hasContent && !hasAttachments) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Message must contain text or at least one attachment",
+                path: ["content"],
+            });
+        }
 
-    /*
-     * TEXT messages must contain content.
-     */
-    if (
-        data.type === MessageType.TEXT &&
-        !data.content
-    ) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["content"],
-            message: "Text message content is required",
-        });
-    }
-
-    /*
-     * SYSTEM messages must never be created through
-     * the normal user message endpoint.
-     */
-    if (data.type === MessageType.SYSTEM) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["type"],
-            message: "System messages cannot be created directly",
-        });
-    }
-
-});
+        if (data.type === MessageType.SYSTEM) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "SYSTEM messages cannot be created manually",
+                path: ["type"],
+            });
+        }
+    });
 
 
 export const updateMessageSchema = z.object({

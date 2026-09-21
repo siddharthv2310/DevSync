@@ -92,6 +92,7 @@ model User {
   messageReactions MessageReaction[] @relation("messageReactions")
   messageReads MessageRead[] @relation("messageReaders")
   messageMentions MessageMention[] @relation("messageMentions")
+  attachmentUploads AttachmentUpload[]
 
 
 
@@ -385,6 +386,8 @@ model Conversation{
   messages Message[]
   readStates ConversationReadState[]
 
+  attachmentUploads AttachmentUpload[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -530,25 +533,53 @@ model MessageMention{
   @@index([userId])
 }
 
-model MessageAttachment{
-  id String @id @default(uuid())
-
-  messageId String
-  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
+model MessageAttachment {
+  id           String   @id @default(uuid())
+  messageId    String
   originalName String
   storageKey   String
-
   mimeType     String
   sizeBytes    Int
-
   url          String?
   thumbnailUrl String?
+  createdAt    DateTime @default(now())
 
-  createdAt DateTime @default(now())
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
 }
+
+
+
+model AttachmentUpload{
+  id   String   @id @default(uuid())
+  userId   String
+  conversationId String
+
+  originalName   String
+  storageKey String
+  mimeType   String
+  sizeBytes   Int
+
+  status   AttachmentUploadStatus  @default(PENDING)
+
+  expiresAt      DateTime
+  completedAt    DateTime?
+  consumedAt     DateTime?
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([conversationId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+
 
 
 
@@ -626,3 +657,10 @@ enum MessageType{
   SYSTEM
 }
 
+enum AttachmentUploadStatus{
+  PENDING
+  COMPLETED
+  CONSUMED
+  FAILED
+  EXPIRED
+}
