@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
-
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import s3Client from "../../../config/s3.js";
 import { AWS_CONFIG } from "../../../config/aws.js";
 import prisma from "../../../config/prisma.js";
@@ -121,4 +121,53 @@ export const completeUpload = async (conversationId: string, uploadId: string, u
 
     return completedUpload;
 
+};
+
+
+
+const PRESIGNED_DOWNLOAD_URL_EXPIRES_IN = 5 * 60;
+
+export const generateDownloadUrl = async ( conversationId: string, attachmentId: string) => {
+    const attachment = await prisma.messageAttachment.findFirst({
+        where: {
+            id: attachmentId,
+            message: {
+                conversationId,
+            },
+        },
+        select: {
+            id: true,
+            originalName: true,
+            storageKey: true,
+            mimeType: true,
+        },
+    });
+
+    if (!attachment) {
+        throw new ApiErrors(404, "Attachment not found");
+    }
+
+    const command = new GetObjectCommand({
+        Bucket: AWS_CONFIG.bucketName,
+        Key: attachment.storageKey,
+        ResponseContentType: attachment.mimeType,
+        ResponseContentDisposition:
+            `attachment; filename*=UTF-8''${encodeURIComponent(attachment.originalName)}`,
+    });
+
+    const downloadUrl = await getSignedUrl(
+        s3Client,
+        command,
+        {
+            expiresIn: PRESIGNED_DOWNLOAD_URL_EXPIRES_IN,
+        }
+    );
+
+    return {
+        attachmentId: attachment.id,
+        originalName: attachment.originalName,
+        mimeType: attachment.mimeType,
+        downloadUrl,
+        expiresIn: PRESIGNED_DOWNLOAD_URL_EXPIRES_IN,
+    };
 };

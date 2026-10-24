@@ -13,6 +13,17 @@ export interface MessageMentionInput {
     username: string;
 }
 
+export interface MessageAttachmentResponse {
+    id: string;
+    originalName: string;
+    storageKey: string;
+    mimeType: string;
+    sizeBytes: number;
+    url: string | null;
+    thumbnailUrl: string | null;
+    createdAt: Date;
+}
+
 export interface MessageMentionResponse {
     id: string;
     userId: string;
@@ -65,6 +76,8 @@ export interface MessageResponse {
     sender: MessageSender;
 
     mentions: MessageMentionResponse[];
+
+    attachments: MessageAttachmentResponse[];
 }
 
 export interface MessageListResponse {

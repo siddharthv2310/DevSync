@@ -28,6 +28,7 @@ export const messageInclude = {
     sender: {
         select: messageSenderSelect,
     },
+
     mentions: {
         select: {
             id: true,
@@ -38,10 +39,23 @@ export const messageInclude = {
                     name: true,
                     username: true,
                     avatar: true,
-                }
-            }
-        }
-    }
+                },
+            },
+        },
+    },
+
+    attachments: {
+        select: {
+            id: true,
+            originalName: true,
+            storageKey: true,
+            mimeType: true,
+            sizeBytes: true,
+            url: true,
+            thumbnailUrl: true,
+            createdAt: true,
+        },
+    },
 } satisfies Prisma.MessageInclude;
 
 
@@ -73,13 +87,16 @@ export const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: t
 
         sender: message.sender,
         mentions: message.mentions,
+
+        attachments: message.attachments,
     };
 };
 
 
 export const createMessage = async (userId: string, conversationId: string, input: CreateMessageInput): Promise<MessageResponse> => {
 
-    const { type, content, replyToId, mentions, } = input;
+    const { type, content, replyToId, mentions,attachmentUploadIds, } = input;
+
 
     // 1. Check conversation access
     await requireConversationAccess(conversationId, userId);
@@ -92,13 +109,22 @@ export const createMessage = async (userId: string, conversationId: string, inpu
         );
     }
 
-    // 3. Validate text content
-    if (type === MessageType.TEXT && !content?.trim()) {
+
+    const uniqueAttachmentUploadIds = [...new Set(attachmentUploadIds ?? []),];
+
+    // 3. Validate text and file content
+    const hasContent = !!content?.trim();
+    const hasAttachments = uniqueAttachmentUploadIds.length > 0;
+    
+    if (!hasContent && !hasAttachments) {
         throw new ApiErrors(
             400,
-            "Text message content is required"
+            "Message must contain text or at least one attachment"
         );
     }
+
+    // determine the type of message 
+    const messageType = !hasContent && hasAttachments ? MessageType.FILE : type;
 
     // 4. Remove duplicate mentions
     const uniqueMentions = Array.from(
@@ -172,20 +198,57 @@ export const createMessage = async (userId: string, conversationId: string, inpu
     // 7. Generate message ID
     const messageId = replyToId ? crypto.randomUUID() : threadRootId;
 
-    // 8. Create message + mentions atomically
+    // this is next part 
+    
     const message = await prisma.$transaction(async (tx) => {
+
+        const attachmentUploads =
+            uniqueAttachmentUploadIds.length > 0
+                ? await tx.attachmentUpload.findMany({
+                      where: {
+                          id: {
+                              in: uniqueAttachmentUploadIds,
+                          },
+                          userId,
+                          conversationId,
+                          status: "COMPLETED",
+                      },
+                  })
+                : [];
+    
+        if (
+            attachmentUploads.length !==
+            uniqueAttachmentUploadIds.length
+        ) {
+            throw new ApiErrors(
+                400,
+                "One or more attachments are invalid or not completed"
+            );
+        }
+    
         await tx.message.create({
             data: {
                 id: messageId,
                 conversationId,
                 senderId: userId,
-                type,
+                type: messageType,
                 content: content?.trim() || null,
                 replyToId: replyToId ?? null,
                 threadRootId,
+    
+                attachments: {
+                    createMany: {
+                        data: attachmentUploads.map((upload) => ({
+                            originalName: upload.originalName,
+                            storageKey: upload.storageKey,
+                            mimeType: upload.mimeType,
+                            sizeBytes: upload.sizeBytes,
+                        })),
+                    },
+                },
             },
         });
-
+    
         if (uniqueMentions.length > 0) {
             await tx.messageMention.createMany({
                 data: uniqueMentions.map((mention) => ({
@@ -194,7 +257,34 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 })),
             });
         }
-
+    
+        if (uniqueAttachmentUploadIds.length > 0) {
+            const result = await tx.attachmentUpload.updateMany({
+                where: {
+                    id: {
+                        in: uniqueAttachmentUploadIds,
+                    },
+                    userId,
+                    conversationId,
+                    status: "COMPLETED",
+                },
+                data: {
+                    status: "CONSUMED",
+                    consumedAt: new Date(),
+                },
+            });
+    
+            if (
+                result.count !==
+                uniqueAttachmentUploadIds.length
+            ) {
+                throw new ApiErrors(
+                    409,
+                    "One or more attachments have already been used"
+                );
+            }
+        }
+    
         return tx.message.findUniqueOrThrow({
             where: {
                 id: messageId,
@@ -202,6 +292,8 @@ export const createMessage = async (userId: string, conversationId: string, inpu
             include: messageInclude,
         });
     });
+
+
 
     try {
         await publishEvent(

@@ -292,6 +292,7 @@ const AttachmentTest = ({
           className="hidden"
           onChange={handleFileChange}
           disabled={isUploading}
+          multiple
         />
       </label>
 
