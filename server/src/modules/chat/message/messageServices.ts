@@ -239,6 +239,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 attachments: {
                     createMany: {
                         data: attachmentUploads.map((upload) => ({
+                            uploadedById: upload.userId,
                             originalName: upload.originalName,
                             storageKey: upload.storageKey,
                             mimeType: upload.mimeType,
