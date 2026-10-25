@@ -3,6 +3,9 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { canDeleteAttachmentByRole , requireConversationAccess } from "../chatPermissions.js";
+
 import s3Client from "../../../config/s3.js";
 import { AWS_CONFIG } from "../../../config/aws.js";
 import prisma from "../../../config/prisma.js";
@@ -170,4 +173,87 @@ export const generateDownloadUrl = async ( conversationId: string, attachmentId:
         downloadUrl,
         expiresIn: PRESIGNED_DOWNLOAD_URL_EXPIRES_IN,
     };
+};
+
+export const deleteAttachment = async ( conversationId: string, attachmentId: string, userId: string ): Promise<void> => {
+
+    const attachment = await prisma.messageAttachment.findFirst({
+        where: {
+            id: attachmentId,
+            message: { conversationId },
+        },
+        select: {
+            id: true,
+            storageKey: true,
+            uploadedById: true,
+            deletionPending: true,
+        },
+    });
+
+    if (!attachment) {
+        throw new ApiErrors(404, "Attachment not found");
+    }
+
+    // 3. The uploader can delete their own attachment.
+    // Otherwise, verify role hierarchy.
+    if (attachment.uploadedById !== userId) {
+
+        if(!attachment.uploadedById){
+            throw new ApiErrors(400, "Attachment was not uploaded by a user");
+        }
+
+        const allowed = await canDeleteAttachmentByRole(
+            conversationId,
+            userId,
+            attachment.uploadedById
+        );
+
+        if (!allowed) {
+            throw new ApiErrors(403,"You do not have permission to delete this attachment" );
+        }
+    }
+
+    // 4. Claim deletion so concurrent requests do not process
+    // the same attachment simultaneously.
+    if (!attachment.deletionPending) {
+        const claimed = await prisma.messageAttachment.updateMany({
+            where: {
+                id: attachment.id,
+                deletionPending: false,
+            },
+            data: { deletionPending: true },
+        });
+
+        if (claimed.count !== 1) {
+            throw new ApiErrors(409,"Attachment deletion is already in progress");
+        }
+    }
+
+    // 5. Delete from S3, then delete the database record.
+    // If S3 fails, reset the flag so the request can be retried.
+    try {
+        await s3Client.send(
+            new DeleteObjectCommand({
+                Bucket: AWS_CONFIG.bucketName,
+                Key: attachment.storageKey,
+            })
+        );
+    } catch (error) {
+        await prisma.messageAttachment.updateMany({
+            where: { id: attachment.id },
+            data: { deletionPending: false },
+        });
+
+        throw new ApiErrors(502, "Failed to delete attachment from storage");
+    }
+
+    try {
+        await prisma.messageAttachment.delete({
+            where: { id: attachment.id },
+        });
+    } catch (error) {
+        // Keep deletionPending=true. A retry can repeat the S3 delete
+        // and then retry removal of the database record.
+        throw new ApiErrors( 500, "File was removed from storage, but its database record could not be removed. Retry deletion." );
+    }
 };
