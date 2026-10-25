@@ -683,3 +683,156 @@ const validateMentionedUsersAccess = async (
             );
     }
 };
+
+
+
+export const canDeleteAttachmentByRole = async ( conversationId: string, requesterId: string, uploaderId: string ): Promise<boolean> => {
+    const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: {
+            type: true,
+            organizationId: true,
+            teamId: true,
+            projectId: true,
+        },
+    });
+
+    if (!conversation) {
+        throw new ApiErrors(404, "Conversation not found");
+    }
+
+    // Direct chats have no admin/owner hierarchy.
+    if (conversation.type === ConversationType.DIRECT) {
+        return false;
+    }
+
+    // Role levels: member/viewer = 0, admin = 1,
+    // resource owner = 2, organization owner = 3.
+    const getOrganizationLevel = async (userId: string, organizationId: string) => {
+        const member = await prisma.organizationMember.findUnique({
+            where: {
+                organizationId_userId: { organizationId, userId },
+            },
+            select: { role: true },
+        });
+
+        if (member?.role === OrganizationRole.OWNER) return 3;
+        if (member?.role === OrganizationRole.ADMIN) return 1;
+        return -1;
+    };
+
+    const getRoleLevel = async (userId: string): Promise<number> => {
+        if (conversation.type === ConversationType.ORGANIZATION) {
+            if (!conversation.organizationId) {
+                throw new ApiErrors(500, "Invalid organization conversation");
+            }
+
+            return getOrganizationLevel(userId, conversation.organizationId);
+        }
+
+        if (conversation.type === ConversationType.TEAM) {
+            if (!conversation.teamId) {
+                throw new ApiErrors(500, "Invalid team conversation");
+            }
+
+            const team = await prisma.team.findUnique({
+                where: { id: conversation.teamId },
+                select: { organizationId: true },
+            });
+
+            if (!team) throw new ApiErrors(404, "Team not found");
+
+            const organizationLevel = await getOrganizationLevel(
+                userId,
+                team.organizationId
+            );
+
+            if (organizationLevel === 3) return 3;
+
+            const member = await prisma.teamMember.findUnique({
+                where: {
+                    teamId_userId: {
+                        teamId: conversation.teamId,
+                        userId,
+                    },
+                },
+                select: { role: true },
+            });
+
+            if (member?.role === TeamRole.OWNER) return 2;
+            if (
+                member?.role === TeamRole.ADMIN ||
+                organizationLevel === 1
+            ) {
+                return 1;
+            }
+
+            return member ? 0 : -1;
+        }
+
+        if (conversation.type === ConversationType.PROJECT) {
+            if (!conversation.projectId) {
+                throw new ApiErrors(500, "Invalid project conversation");
+            }
+
+            const project = await prisma.project.findUnique({
+                where: { id: conversation.projectId },
+                select: { organizationId: true },
+            });
+
+            if (!project) throw new ApiErrors(404, "Project not found");
+
+            const organizationLevel = await getOrganizationLevel(
+                userId,
+                project.organizationId
+            );
+
+            if (organizationLevel === 3) return 3;
+
+            const member = await prisma.projectMember.findUnique({
+                where: {
+                    projectId_userId: {
+                        projectId: conversation.projectId,
+                        userId,
+                    },
+                },
+                select: { role: true },
+            });
+
+            if (member?.role === projectRole.OWNER) return 2;
+
+            if (
+                member?.role === projectRole.ADMIN ||
+                organizationLevel === 1
+            ) {
+                return 1;
+            }
+
+            if (member?.role === projectRole.MEMBER ||
+                member?.role === projectRole.VIEWER) {
+                return 0;
+            }
+
+            return -1;
+        }
+
+        return -1;
+    };
+
+    const [requesterLevel, uploaderLevel] = await Promise.all([
+        getRoleLevel(requesterId),
+        getRoleLevel(uploaderId),
+    ]);
+
+    if (requesterLevel < 0 || uploaderLevel < 0) {
+        return false;
+    }
+
+    // Organization owner can delete attachments belonging to anyone
+    // in the organization conversation scope.
+    if (requesterLevel === 3) return true;
+
+    // Otherwise, a strictly higher role can delete a lower role's
+    // attachment. Equal roles cannot delete each other's attachments.
+    return requesterLevel > uploaderLevel;
+};

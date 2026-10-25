@@ -94,6 +94,8 @@ model User {
   messageMentions MessageMention[] @relation("messageMentions")
   attachmentUploads AttachmentUpload[]
 
+  uploadedAttachments MessageAttachment[] @relation("messageAttachmentUploader")
+
 
 
   createdAt DateTime @default(now())
@@ -543,10 +545,16 @@ model MessageAttachment {
   url          String?
   thumbnailUrl String?
   createdAt    DateTime @default(now())
+  
+  deletionPending Boolean @default(false)
+
+  uploadedById String?
+  uploadedBy User? @relation( "messageAttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict )
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
+  @@index([uploadedById])
 }
 
 
