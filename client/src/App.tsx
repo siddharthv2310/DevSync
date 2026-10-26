@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 
 import Login from "./pages/Login";
 import VerifyLoginOtp from "./pages/VerifyLoginOtp";
@@ -18,6 +18,10 @@ const Home = () => {
                 "conversation:join",
                 "b9355c23-9e13-4a4e-be13-7d7ff5aa7d0e"
             );
+        });
+
+        socket.on("message:new", (message) => {
+            console.log("📩 New message received:", message);
         });
 
         socket.on("conversation:joined", (data) => {
@@ -48,6 +52,7 @@ const Home = () => {
             socket.off("conversation:error");
             socket.off("connect_error");
             socket.off("disconnect");
+            socket.off("message:new");
 
             socket.disconnect();
         };

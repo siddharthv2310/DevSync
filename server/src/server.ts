@@ -9,7 +9,7 @@ const startServer = async () => {
     try {
         await connectRedis();
 
-        startAttachmentCleanupJob();
+       // startAttachmentCleanupJob();
 
         const httpServer = createServer(app)
 
