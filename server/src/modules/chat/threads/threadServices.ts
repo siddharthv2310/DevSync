@@ -16,16 +16,30 @@ const messageSenderSelect = {
 
 const messageInclude = {
     sender: {
-        select: messageSenderSelect,
+      select: messageSenderSelect,
     },
+  
     mentions: {
-        include: {
-            user: {
-                select: messageSenderSelect,
-            },
+      include: {
+        user: {
+          select: messageSenderSelect,
         },
+      },
     },
-} satisfies Prisma.MessageInclude;
+  
+    attachments: {
+      select: {
+        id: true,
+        originalName: true,
+        storageKey: true,
+        mimeType: true,
+        sizeBytes: true,
+        url: true,
+        thumbnailUrl: true,
+        createdAt: true,
+      },
+    },
+  } satisfies Prisma.MessageInclude;
 
 
 type MessageWithSender = Prisma.MessageGetPayload<{
@@ -59,6 +73,10 @@ const toMessageResponse = ( message: MessageWithSender): MessageResponse => {
 
         sender: message.sender,
         mentions : message.mentions,
+
+        attachments: message.attachments,
+
+        threadRootId: message.threadRootId,
     };
 };
 

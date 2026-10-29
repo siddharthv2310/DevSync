@@ -18,6 +18,17 @@ interface ReactionUpdatedEvent {
     messageId: string,
 }
 
+interface ThreadReplyCreatedEvent {
+    conversationId: string;
+    threadRootId: string;
+    message: {
+      id: string;
+      conversationId: string;
+      replyToId: string | null;
+      threadRootId: string | null;
+    };
+  }
+
 export const subscribeToMessageEvents = async (io: Server) => {
     const subscribeToMessageEvent = async (channel: string, socketEvent: string) => {
 
@@ -103,5 +114,40 @@ export const subscribeToMessageEvents = async (io: Server) => {
     console.log(
         `Subscribed to ${REALTIME_CHANNELS.REACTION_UPDATED}`
     );
+
+    await subscribeToChannel( REALTIME_CHANNELS.THREAD_REPLY_CREATED, (rawMessage) => {
+          try {
+            const event = JSON.parse(rawMessage ) as ThreadReplyCreatedEvent;
+      
+            if (
+              !event.conversationId ||
+              !event.threadRootId ||
+              !event.message?.id ||
+              event.message.conversationId !== event.conversationId ||
+              event.message.threadRootId !== event.threadRootId ||
+              !event.message.replyToId
+            ) {
+              console.error("Invalid thread-reply-created event");
+              return;
+            }
+      
+            io.to(`conversation:${event.conversationId}`).emit(
+              SOCKET_EVENTS.THREAD_REPLY_CREATED,
+              event
+            );
+          } 
+          catch (error) {
+            console.error(
+              "Failed to process thread-reply-created event:",
+              error
+            );
+          }
+        }
+      );
+      
+      console.log(
+        `Subscribed to ${REALTIME_CHANNELS.THREAD_REPLY_CREATED}`
+      );
+
 
 };

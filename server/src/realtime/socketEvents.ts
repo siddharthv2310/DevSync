@@ -3,6 +3,7 @@ export const REALTIME_CHANNELS = {
     MESSAGE_UPDATED: "realtime:message:updated",
     MESSAGE_DELETED: "realtime:message:deleted",
     REACTION_UPDATED: "realtime:reaction:updated",
+    THREAD_REPLY_CREATED: "realtime:thread:reply:created",
 }as const ;
 
 export const SOCKET_EVENTS = {
@@ -10,5 +11,6 @@ export const SOCKET_EVENTS = {
     MESSAGE_UPDATED: "message:updated",
     MESSAGE_DELETED: "message:deleted",
     REACTION_UPDATED: "reaction:updated",
+    THREAD_REPLY_CREATED: "thread:reply:created",
 } as const;
 

@@ -89,6 +89,8 @@ export const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: t
         mentions: message.mentions,
 
         attachments: message.attachments,
+
+        threadRootId: message.threadRootId,
     };
 };
 
@@ -146,7 +148,8 @@ export const createMessage = async (userId: string, conversationId: string, inpu
     }
 
     // 6. Determine thread root
-    let threadRootId: string;
+    let threadRootId: string | null = null;
+    const messageId = crypto.randomUUID();
 
     if (replyToId) {
 
@@ -192,11 +195,9 @@ export const createMessage = async (userId: string, conversationId: string, inpu
     } else {
 
         // Root message
-        threadRootId = crypto.randomUUID();
+        threadRootId = messageId;
     }
-
-    // 7. Generate message ID
-    const messageId = replyToId ? crypto.randomUUID() : threadRootId;
+   
 
     // this is next part 
 
@@ -312,7 +313,25 @@ export const createMessage = async (userId: string, conversationId: string, inpu
         );
     }
 
+    if (replyToId && message.threadRootId) {
+        try {
+          await publishEvent( REALTIME_CHANNELS.THREAD_REPLY_CREATED,
+            {
+              conversationId,
+              threadRootId: message.threadRootId,
+              message: toMessageResponse(message),
+            }
+          );
+        } 
+        catch (error) {
+          console.error(
+            "Failed to publish thread-reply-created event:",
+            error
+          );
+        }
+      }
 
+      
     return toMessageResponse(message);
 };
 

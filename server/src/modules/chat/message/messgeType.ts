@@ -78,6 +78,8 @@ export interface MessageResponse {
     mentions: MessageMentionResponse[];
 
     attachments: MessageAttachmentResponse[];
+
+    threadRootId: string | null;
 }
 
 export interface MessageListResponse {
