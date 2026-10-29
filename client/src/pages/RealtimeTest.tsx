@@ -161,6 +161,11 @@ export default function RealtimeTest() {
       });
     };
 
+    const handleMessageRead = (event: MessageEvent) => {
+      console.log("READ RECEIPT EVENT RECEIVED:", event);
+    };
+    
+
     socket.on("connect", handleConnect);
     socket.on("conversation:joined", handleJoined);
     socket.on("conversation:error", handleConversationError);
@@ -170,6 +175,7 @@ export default function RealtimeTest() {
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
     socket.on("reaction:updated", handleReactionUpdated);
+    socket.on("message:read", handleMessageRead);
 
     if (!socket.connected) {
       socket.connect();
@@ -187,6 +193,7 @@ export default function RealtimeTest() {
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
       socket.off("reaction:updated", handleReactionUpdated);
+      socket.off("message:read", handleMessageRead);
       socket.disconnect();
     };
   }, [loadMessages, mergeMessages]);

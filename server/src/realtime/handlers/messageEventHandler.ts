@@ -22,12 +22,19 @@ interface ThreadReplyCreatedEvent {
     conversationId: string;
     threadRootId: string;
     message: {
-      id: string;
-      conversationId: string;
-      replyToId: string | null;
-      threadRootId: string | null;
+        id: string;
+        conversationId: string;
+        replyToId: string | null;
+        threadRootId: string | null;
     };
-  }
+}
+
+interface MessageReadEvent {
+    conversationId: string;
+    messageIds: string[];
+    userId: string;
+    readAt: string;
+}
 
 export const subscribeToMessageEvents = async (io: Server) => {
     const subscribeToMessageEvent = async (channel: string, socketEvent: string) => {
@@ -115,39 +122,76 @@ export const subscribeToMessageEvents = async (io: Server) => {
         `Subscribed to ${REALTIME_CHANNELS.REACTION_UPDATED}`
     );
 
-    await subscribeToChannel( REALTIME_CHANNELS.THREAD_REPLY_CREATED, (rawMessage) => {
-          try {
-            const event = JSON.parse(rawMessage ) as ThreadReplyCreatedEvent;
-      
+    await subscribeToChannel(REALTIME_CHANNELS.THREAD_REPLY_CREATED, (rawMessage) => {
+        try {
+            const event = JSON.parse(rawMessage) as ThreadReplyCreatedEvent;
+
             if (
-              !event.conversationId ||
-              !event.threadRootId ||
-              !event.message?.id ||
-              event.message.conversationId !== event.conversationId ||
-              event.message.threadRootId !== event.threadRootId ||
-              !event.message.replyToId
+                !event.conversationId ||
+                !event.threadRootId ||
+                !event.message?.id ||
+                event.message.conversationId !== event.conversationId ||
+                event.message.threadRootId !== event.threadRootId ||
+                !event.message.replyToId
             ) {
-              console.error("Invalid thread-reply-created event");
-              return;
+                console.error("Invalid thread-reply-created event");
+                return;
             }
-      
+
             io.to(`conversation:${event.conversationId}`).emit(
-              SOCKET_EVENTS.THREAD_REPLY_CREATED,
-              event
+                SOCKET_EVENTS.THREAD_REPLY_CREATED,
+                event
             );
-          } 
-          catch (error) {
-            console.error(
-              "Failed to process thread-reply-created event:",
-              error
-            );
-          }
         }
-      );
-      
-      console.log(
+        catch (error) {
+            console.error(
+                "Failed to process thread-reply-created event:",
+                error
+            );
+        }
+    }
+    );
+
+    console.log(
         `Subscribed to ${REALTIME_CHANNELS.THREAD_REPLY_CREATED}`
-      );
+    );
+
+
+    await subscribeToChannel( REALTIME_CHANNELS.MESSAGE_READ, (rawMessage) => {
+            try {
+                const event = JSON.parse(rawMessage) as MessageReadEvent;
+    
+                if (
+                    !event.conversationId ||
+                    !event.userId ||
+                    !event.readAt ||
+                    !Array.isArray(event.messageIds) ||
+                    event.messageIds.length === 0 ||
+                    !event.messageIds.every(
+                        (id) => typeof id === "string" && id.length > 0
+                    )
+                ) {
+                    console.error("Invalid message-read event");
+                    return;
+                }
+    
+                io.to(`conversation:${event.conversationId}`).emit(
+                        SOCKET_EVENTS.MESSAGE_READ,
+                        event
+                    );
+            } 
+            catch (error) {
+                console.error(
+                    "Failed to process message-read event:",
+                    error
+                );
+            }
+        }
+    );
+    
+    console.log(
+        `Subscribed to ${REALTIME_CHANNELS.MESSAGE_READ}`
+    );
 
 
 };
