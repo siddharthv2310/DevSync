@@ -1,81 +1,11 @@
-import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import Login from "./pages/Login";
 import VerifyLoginOtp from "./pages/VerifyLoginOtp";
 import UploadFileToS3 from "./pages/UploadFileToS3";
-import { socket } from "./Socket";
+import RealtimeTest from "./pages/RealtimeTest";
 
-const Home = () => {
-    useEffect(() => {
-        socket.connect();
 
-        socket.on("connect", () => {
-            console.log("✅ Socket connected:", socket.id);
-
-            // Join a conversation after socket authentication succeeds
-            socket.emit(
-                "conversation:join",
-                "b9355c23-9e13-4a4e-be13-7d7ff5aa7d0e"
-            );
-        });
-
-        socket.on("message:updated", (message) => {
-            console.log("✏️ Message updated:", message);
-        });
-
-        socket.on("message:deleted", (event) => {
-            console.log("🗑️ Message deleted:", event);
-        });
-
-        socket.on("message:new", (message) => {
-            console.log("📩 New message received:", message);
-        });
-
-        socket.on("conversation:joined", (data) => {
-            console.log("✅ Joined conversation:", data);
-        });
-
-        socket.on("conversation:error", (data) => {
-            console.error("❌ Conversation error:", data);
-        });
-
-        socket.on("connect_error", (error) => {
-            console.error(
-                "❌ Socket connection error:",
-                error.message
-            );
-        });
-
-        socket.on("disconnect", (reason) => {
-            console.log(
-                "🔌 Socket disconnected:",
-                reason
-            );
-        });
-
-        return () => {
-            socket.off("connect");
-            socket.off("conversation:joined");
-            socket.off("conversation:error");
-            socket.off("connect_error");
-            socket.off("disconnect");
-            socket.off("message:new");
-            socket.off("message:updated");
-            socket.off("message:deleted");
-
-            socket.disconnect();
-        };
-    }, []);
-
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100">
-            <h1 className="text-4xl font-bold text-blue-600">
-                DevSync Realtime Test
-            </h1>
-        </div>
-    );
-};
 
 function App() {
     return (
@@ -101,7 +31,7 @@ function App() {
 
             <Route
                 path="/"
-                element={<Home />}
+                element={<RealtimeTest />}
             />
 
         </Routes>
