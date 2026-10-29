@@ -88,7 +88,19 @@ export const getMessagesQuerySchema = z.object({
         .optional(),
 });
 
+export const markMessagesAsReadSchema = z.object({
+    messageIds: z
+        .array(z.string().uuid("Invalid message ID"))
+        .min(1, "At least one message ID is required")
+        .max(100, "Cannot mark more than 100 messages as read at once")
+        .refine(
+            (ids) => new Set(ids).size === ids.length,
+            "Duplicate message IDs are not allowed"
+        ),
+});
+
 
 export type CreateMessageInput = z.infer<typeof createMessageSchema>;
 export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
 export type GetMessagesQuery = z.infer<typeof getMessagesQuerySchema>;
+export type MarkMessagesAsReadInput = z.infer<typeof markMessagesAsReadSchema>;
