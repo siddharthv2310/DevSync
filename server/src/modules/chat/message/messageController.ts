@@ -198,3 +198,26 @@ export const markMessagesAsReadController = async (req: Request,res: Response,ne
         next(error);
     }
 };
+
+
+export const getMessageReadReceiptsController = async ( req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors(401, "Authentication required");
+        }
+
+        const { messageId } = messageIdParamSchema.parse(req.params);
+
+        const result = await messageServices.getMessageReadReceipts( userId, messageId);
+
+        return res.status(200).json({
+            success: true,
+            data: result,
+        });
+    } 
+    catch (error) {
+        next(error);
+    }
+};

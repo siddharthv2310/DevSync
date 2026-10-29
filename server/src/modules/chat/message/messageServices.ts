@@ -715,3 +715,51 @@ export const markMessagesAsRead = async ( userId: string,conversationId: string,
         messageIds: eligibleMessageIds,
     };
 };
+
+export const getMessageReadReceipts = async (userId: string,messageId: string) => {
+    const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        select: {
+            id: true,
+            conversationId: true,
+        },
+    });
+
+    if (!message) {
+        throw new ApiErrors(404, "Message not found");
+    }
+
+    await requireConversationAccess( message.conversationId, userId);
+
+    const receipts = await prisma.messageRead.findMany({
+        where: {
+            messageId,
+        },
+        select: {
+            userId: true,
+            readAt: true,
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    avatar: true,
+                },
+            },
+        },
+        orderBy: {
+            readAt: "asc",
+        },
+    });
+
+    return {
+        messageId: message.id,
+        conversationId: message.conversationId,
+        readers: receipts.map((receipt) => ({
+            userId: receipt.userId,
+            readAt: receipt.readAt,
+            user: receipt.user,
+        })),
+        readerCount: receipts.length,
+    };
+};
