@@ -4,7 +4,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 import * as messageServices from "./messageServices.js"
 
-import { conversationIdParamSchema, createMessageSchema, getMessagesQuerySchema, messageIdParamSchema, updateMessageSchema } from "./messageValidation.js";
+import { conversationIdParamSchema, createMessageSchema, getMessagesQuerySchema, markMessagesAsReadSchema, messageIdParamSchema, updateMessageSchema } from "./messageValidation.js";
 
 
 export const createMessageController = async (req: Request, res: Response, next: NextFunction) => {
@@ -162,6 +162,38 @@ export const deleteMessageController = async (req: Request, res: Response, next:
         });
 
     }
+    catch (error) {
+        next(error);
+    }
+};
+
+
+
+export const markMessagesAsReadController = async (req: Request,res: Response,next: NextFunction) => {
+    
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors(401, "Authentication required");
+        }
+
+        const { conversationId } = conversationIdParamSchema.parse(req.params);
+
+        const input = markMessagesAsReadSchema.parse(req.body);
+
+        const result = await messageServices.markMessagesAsRead(
+            userId,
+            conversationId,
+            input
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Read receipts updated successfully",
+            data: result,
+        });
+    } 
     catch (error) {
         next(error);
     }

@@ -8,6 +8,7 @@ import { CreateMessageInput, GetMessagesQuery, UpdateMessageInput } from "./mess
 import { decodeCursor, encodeCursor } from "../../../utils/cursorPagination.js";
 import { publishEvent } from "../../../realtime/redis/redisPubSub.js";
 import { REALTIME_CHANNELS } from "../../../realtime/socketEvents.js";
+import { MarkMessagesAsReadInput } from "./messageValidation.js";
 
 
 
@@ -197,7 +198,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
         // Root message
         threadRootId = messageId;
     }
-   
+
 
     // this is next part 
 
@@ -315,23 +316,23 @@ export const createMessage = async (userId: string, conversationId: string, inpu
 
     if (replyToId && message.threadRootId) {
         try {
-          await publishEvent( REALTIME_CHANNELS.THREAD_REPLY_CREATED,
-            {
-              conversationId,
-              threadRootId: message.threadRootId,
-              message: toMessageResponse(message),
-            }
-          );
-        } 
-        catch (error) {
-          console.error(
-            "Failed to publish thread-reply-created event:",
-            error
-          );
+            await publishEvent(REALTIME_CHANNELS.THREAD_REPLY_CREATED,
+                {
+                    conversationId,
+                    threadRootId: message.threadRootId,
+                    message: toMessageResponse(message),
+                }
+            );
         }
-      }
+        catch (error) {
+            console.error(
+                "Failed to publish thread-reply-created event:",
+                error
+            );
+        }
+    }
 
-      
+
     return toMessageResponse(message);
 };
 
@@ -618,7 +619,7 @@ export const deleteMessage = async (userId: string, messageId: string): Promise<
             deletedAt,
             deletedById: userId,
         });
-    } 
+    }
     catch (error) {
         console.error(
             "Failed to publish message-deleted event:",
@@ -628,3 +629,89 @@ export const deleteMessage = async (userId: string, messageId: string): Promise<
 };
 
 
+// mark message as read 
+
+export const markMessagesAsRead = async ( userId: string,conversationId: string,input: MarkMessagesAsReadInput ) => {
+    await requireConversationAccess(conversationId, userId);
+
+    const { messageIds } = input;
+
+    // Validate that every requested message belongs to this conversation.
+    const messages = await prisma.message.findMany({
+        where: {
+            id: { in: messageIds },
+            conversationId,
+        },
+        select: {
+            id: true,
+            senderId: true,
+            deletedAt: true,
+        },
+    });
+
+    if (messages.length !== messageIds.length) {
+        throw new ApiErrors(404,"One or more messages were not found in this conversation");
+    }
+
+    // Users should not create read receipts for their own messages.
+    const eligibleMessageIds = messages.filter( (message) =>
+            message.senderId !== userId &&
+            message.deletedAt === null
+        )
+        .map((message) => message.id);
+
+    if (eligibleMessageIds.length === 0) {
+        return {
+            markedCount: 0,
+            messageIds: [],
+        };
+    }
+
+    // Find existing receipts so we can publish only newly observed reads.
+    const existingReads = await prisma.messageRead.findMany({
+        where: {
+            userId,
+            messageId: { in: eligibleMessageIds },
+        },
+        select: {
+            messageId: true,
+        },
+    });
+
+    const existingMessageIds = new Set(
+        existingReads.map((read) => read.messageId)
+    );
+
+    const result = await prisma.messageRead.createMany({
+        data: eligibleMessageIds.map((messageId) => ({
+            messageId,
+            userId,
+        })),
+        skipDuplicates: true,
+    });
+
+    const newlyReadMessageIds = eligibleMessageIds.filter(
+        (messageId) => !existingMessageIds.has(messageId)
+    );
+
+    if (newlyReadMessageIds.length > 0) {
+        try {
+            await publishEvent(REALTIME_CHANNELS.MESSAGE_READ, {
+                conversationId,
+                messageIds: newlyReadMessageIds,
+                userId,
+                readAt: new Date().toISOString(),
+            });
+        } catch (error) {
+            console.error(
+                "Failed to publish message-read event:",
+                error
+            );
+        }
+    }
+
+    return {
+        markedCount: result.count,
+        messageIds: eligibleMessageIds,
+    };
+};
