@@ -95,7 +95,7 @@ export const toMessageResponse = (message: Prisma.MessageGetPayload<{ include: t
 
 export const createMessage = async (userId: string, conversationId: string, input: CreateMessageInput): Promise<MessageResponse> => {
 
-    const { type, content, replyToId, mentions,attachmentUploadIds, } = input;
+    const { type, content, replyToId, mentions, attachmentUploadIds, } = input;
 
 
     // 1. Check conversation access
@@ -115,7 +115,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
     // 3. Validate text and file content
     const hasContent = !!content?.trim();
     const hasAttachments = uniqueAttachmentUploadIds.length > 0;
-    
+
     if (!hasContent && !hasAttachments) {
         throw new ApiErrors(
             400,
@@ -199,23 +199,23 @@ export const createMessage = async (userId: string, conversationId: string, inpu
     const messageId = replyToId ? crypto.randomUUID() : threadRootId;
 
     // this is next part 
-    
+
     const message = await prisma.$transaction(async (tx) => {
 
         const attachmentUploads =
             uniqueAttachmentUploadIds.length > 0
                 ? await tx.attachmentUpload.findMany({
-                      where: {
-                          id: {
-                              in: uniqueAttachmentUploadIds,
-                          },
-                          userId,
-                          conversationId,
-                          status: "COMPLETED",
-                      },
-                  })
+                    where: {
+                        id: {
+                            in: uniqueAttachmentUploadIds,
+                        },
+                        userId,
+                        conversationId,
+                        status: "COMPLETED",
+                    },
+                })
                 : [];
-    
+
         if (
             attachmentUploads.length !==
             uniqueAttachmentUploadIds.length
@@ -225,7 +225,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 "One or more attachments are invalid or not completed"
             );
         }
-    
+
         await tx.message.create({
             data: {
                 id: messageId,
@@ -235,7 +235,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 content: content?.trim() || null,
                 replyToId: replyToId ?? null,
                 threadRootId,
-    
+
                 attachments: {
                     createMany: {
                         data: attachmentUploads.map((upload) => ({
@@ -249,7 +249,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 },
             },
         });
-    
+
         if (uniqueMentions.length > 0) {
             await tx.messageMention.createMany({
                 data: uniqueMentions.map((mention) => ({
@@ -258,7 +258,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 })),
             });
         }
-    
+
         if (uniqueAttachmentUploadIds.length > 0) {
             const result = await tx.attachmentUpload.updateMany({
                 where: {
@@ -274,7 +274,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                     consumedAt: new Date(),
                 },
             });
-    
+
             if (
                 result.count !==
                 uniqueAttachmentUploadIds.length
@@ -285,7 +285,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 );
             }
         }
-    
+
         return tx.message.findUniqueOrThrow({
             where: {
                 id: messageId,
@@ -304,7 +304,7 @@ export const createMessage = async (userId: string, conversationId: string, inpu
                 message: toMessageResponse(message),
             }
         );
-    } 
+    }
     catch (error) {
         console.error(
             "Failed to publish message realtime event:",
@@ -511,7 +511,22 @@ export const updateMessage = async (userId: string, messageId: string, input: Up
     });
 
 
-    return toMessageResponse(updatedMessage);
+    const response = toMessageResponse(updatedMessage);
+
+    try {
+        await publishEvent(REALTIME_CHANNELS.MESSAGE_UPDATED, {
+            conversationId: message.conversationId,
+            message: response,
+        });
+    }
+    catch (error) {
+        console.error(
+            "Failed to publish message-updated event:",
+            error
+        );
+    }
+
+    return response;
 };
 
 
@@ -565,16 +580,32 @@ export const deleteMessage = async (userId: string, messageId: string): Promise<
 
     // 6. Soft delete
 
+    const deletedAt = new Date();
+
     await prisma.message.update({
         where: {
             id: messageId,
         },
-
         data: {
-            deletedAt: new Date(),
+            deletedAt,
             deletedById: userId,
         },
     });
+
+    try {
+        await publishEvent(REALTIME_CHANNELS.MESSAGE_DELETED, {
+            conversationId: message.conversationId,
+            messageId: message.id,
+            deletedAt,
+            deletedById: userId,
+        });
+    } 
+    catch (error) {
+        console.error(
+            "Failed to publish message-deleted event:",
+            error
+        );
+    }
 };
 
 

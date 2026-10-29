@@ -20,6 +20,14 @@ const Home = () => {
             );
         });
 
+        socket.on("message:updated", (message) => {
+            console.log("✏️ Message updated:", message);
+        });
+
+        socket.on("message:deleted", (event) => {
+            console.log("🗑️ Message deleted:", event);
+        });
+
         socket.on("message:new", (message) => {
             console.log("📩 New message received:", message);
         });
@@ -53,6 +61,8 @@ const Home = () => {
             socket.off("connect_error");
             socket.off("disconnect");
             socket.off("message:new");
+            socket.off("message:updated");
+            socket.off("message:deleted");
 
             socket.disconnect();
         };
