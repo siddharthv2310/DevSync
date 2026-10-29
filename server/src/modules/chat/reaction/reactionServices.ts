@@ -3,27 +3,40 @@ import prisma from "../../../config/prisma.js";
 import { requireConversationAccess } from "../chatPermissions.js";
 import { ReactionInput } from "./reactionValidation.js";
 
+import { publishEvent } from "../../../realtime/redis/redisPubSub.js";
+import { REALTIME_CHANNELS } from "../../../realtime/socketEvents.js";
 
-export const addReaction = async(userId:string , messageId:string , input:ReactionInput)=>{
+
+
+const publishReactionUpdated = async (conversationId: string, messageId: string) => {
+    try {
+        await publishEvent(REALTIME_CHANNELS.REACTION_UPDATED, { conversationId, messageId, });
+    }
+    catch (error) {
+        console.error("Failed to publish reaction update:", error);
+    }
+};
+
+export const addReaction = async (userId: string, messageId: string, input: ReactionInput) => {
     const message = await prisma.message.findUnique({
-        where:{
-            id:messageId,
+        where: {
+            id: messageId,
         },
-        select:{
-            id:true,
-            conversationId:true,
-            deletedAt:true,
+        select: {
+            id: true,
+            conversationId: true,
+            deletedAt: true,
         },
     });
 
-    if(!message){
+    if (!message) {
         throw new ApiErrors(404, "Message not found");
     }
 
-    await requireConversationAccess(message.conversationId,userId);
+    await requireConversationAccess(message.conversationId, userId);
 
     if (message.deletedAt) {
-        throw new ApiErrors(400,"Cannot react to a deleted message");
+        throw new ApiErrors(400, "Cannot react to a deleted message");
     }
 
     const existingReaction = await prisma.messageReaction.findUnique({
@@ -35,12 +48,55 @@ export const addReaction = async(userId:string , messageId:string , input:Reacti
         },
     });
 
-    if(existingReaction){
-        return prisma.messageReaction.update({
-            where: {
-                id: existingReaction.id,
+    // if(existingReaction){
+    //     return prisma.messageReaction.update({
+    //         where: {
+    //             id: existingReaction.id,
+    //         },
+    //         data: {
+    //             emoji: input.emoji,
+    //         },
+    //         select: {
+    //             id: true,
+    //             messageId: true,
+    //             userId: true,
+    //             emoji: true,
+    //             createdAt: true,
+    //         },
+    //     });
+    // }
+
+    // return prisma.messageReaction.create({
+    //     data: {
+    //         messageId,
+    //         userId,
+    //         emoji: input.emoji,
+    //     },
+    //     select: {
+    //         id: true,
+    //         messageId: true,
+    //         userId: true,
+    //         emoji: true,
+    //         createdAt: true,
+    //     },
+    // });
+
+    const reaction = existingReaction
+        ? await prisma.messageReaction.update({
+            where: { id: existingReaction.id },
+            data: { emoji: input.emoji },
+            select: {
+                id: true,
+                messageId: true,
+                userId: true,
+                emoji: true,
+                createdAt: true,
             },
+        })
+        : await prisma.messageReaction.create({
             data: {
+                messageId,
+                userId,
                 emoji: input.emoji,
             },
             select: {
@@ -51,25 +107,13 @@ export const addReaction = async(userId:string , messageId:string , input:Reacti
                 createdAt: true,
             },
         });
-    }
-    
-    return prisma.messageReaction.create({
-        data: {
-            messageId,
-            userId,
-            emoji: input.emoji,
-        },
-        select: {
-            id: true,
-            messageId: true,
-            userId: true,
-            emoji: true,
-            createdAt: true,
-        },
-    });
+
+    await publishReactionUpdated(message.conversationId, messageId);
+
+    return reaction;
 }
 
-export const removeReaction = async(userId:string , messageId : string ): Promise<void>=>{
+export const removeReaction = async (userId: string, messageId: string): Promise<void> => {
 
     const message = await prisma.message.findUnique({
         where: {
@@ -85,7 +129,7 @@ export const removeReaction = async(userId:string , messageId : string ): Promis
         throw new ApiErrors(404, "Message not found");
     }
 
-    await requireConversationAccess( message.conversationId, userId );
+    await requireConversationAccess(message.conversationId, userId);
 
     const reaction = await prisma.messageReaction.findUnique({
         where: {
@@ -105,9 +149,11 @@ export const removeReaction = async(userId:string , messageId : string ): Promis
             id: reaction.id,
         },
     });
+
+    await publishReactionUpdated(message.conversationId, messageId);
 };
 
-export const getMessageReactions = async ( userId: string, messageId: string) => {
+export const getMessageReactions = async (userId: string, messageId: string) => {
     const message = await prisma.message.findUnique({
         where: {
             id: messageId,
@@ -122,7 +168,7 @@ export const getMessageReactions = async ( userId: string, messageId: string) =>
         throw new ApiErrors(404, "Message not found");
     }
 
-    await requireConversationAccess( message.conversationId, userId );
+    await requireConversationAccess(message.conversationId, userId);
 
     const reactions = await prisma.messageReaction.findMany({
         where: {
@@ -143,27 +189,27 @@ export const getMessageReactions = async ( userId: string, messageId: string) =>
     });
 
     const groupedReactions = new Map<
-      string ,
-      {
-        emoji:string,
-        count:number,
-        reactedByMe:boolean,
-        users:{
-            id:string,
-            name:string,
-            username:string | null,
-            avatar:string | null,
-        }[];
-      }
+        string,
+        {
+            emoji: string,
+            count: number,
+            reactedByMe: boolean,
+            users: {
+                id: string,
+                name: string,
+                username: string | null,
+                avatar: string | null,
+            }[];
+        }
     >();
 
     for (const reaction of reactions) {
         const existing = groupedReactions.get(reaction.emoji);
-    
+
         if (existing) {
             existing.count += 1;
             existing.users.push(reaction.user);
-    
+
             if (reaction.userId === userId) {
                 existing.reactedByMe = true;
             }
@@ -176,6 +222,6 @@ export const getMessageReactions = async ( userId: string, messageId: string) =>
             });
         }
     }
-    
+
     return Array.from(groupedReactions.values());
 };

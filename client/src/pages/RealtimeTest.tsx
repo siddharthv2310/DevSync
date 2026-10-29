@@ -150,6 +150,17 @@ export default function RealtimeTest() {
       console.error("Conversation error:", err);
     };
 
+    const handleReactionUpdated = (event: {
+      conversationId: string;
+      messageId: string;
+    }) => {
+      console.log("REACTION EVENT", {
+        tab: window.location.href,
+        time: new Date().toISOString(),
+        ...event,
+      });
+    };
+
     socket.on("connect", handleConnect);
     socket.on("conversation:joined", handleJoined);
     socket.on("conversation:error", handleConversationError);
@@ -158,6 +169,7 @@ export default function RealtimeTest() {
     socket.on("message:deleted", handleDeletedMessage);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
+    socket.on("reaction:updated", handleReactionUpdated);
 
     if (!socket.connected) {
       socket.connect();
@@ -174,6 +186,7 @@ export default function RealtimeTest() {
       socket.off("message:deleted", handleDeletedMessage);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
+      socket.off("reaction:updated", handleReactionUpdated);
       socket.disconnect();
     };
   }, [loadMessages, mergeMessages]);

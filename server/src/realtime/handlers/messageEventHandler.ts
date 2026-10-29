@@ -13,8 +13,13 @@ interface MessageDeletedEvent {
     deletedById: string;
 }
 
+interface ReactionUpdatedEvent {
+    conversationId: string,
+    messageId: string,
+}
+
 export const subscribeToMessageEvents = async (io: Server) => {
-    const subscribeToMessageEvent = async ( channel: string, socketEvent: string) => {
+    const subscribeToMessageEvent = async (channel: string, socketEvent: string) => {
 
         await subscribeToChannel(channel, (rawMessage) => {
             try {
@@ -48,30 +53,55 @@ export const subscribeToMessageEvents = async (io: Server) => {
     );
 
 
-    await subscribeToChannel( REALTIME_CHANNELS.MESSAGE_DELETED, (rawMessage) => {
+    await subscribeToChannel(REALTIME_CHANNELS.MESSAGE_DELETED, (rawMessage) => {
 
-            try {
-                const event = JSON.parse(rawMessage) as MessageDeletedEvent;
-    
-                if (!event.conversationId || !event.messageId || !event.deletedAt || !event.deletedById ) {
-                    console.error("Invalid message-deleted event");
-                    return;
-                }
-    
-                io.to(`conversation:${event.conversationId}`).emit(
-                    SOCKET_EVENTS.MESSAGE_DELETED,
-                    event
-                );
-            } 
-            catch (error) {
-                console.error(
-                    "Failed to process message-deleted event:",
-                    error
-                );
+        try {
+            const event = JSON.parse(rawMessage) as MessageDeletedEvent;
+
+            if (!event.conversationId || !event.messageId || !event.deletedAt || !event.deletedById) {
+                console.error("Invalid message-deleted event");
+                return;
             }
+
+            io.to(`conversation:${event.conversationId}`).emit(
+                SOCKET_EVENTS.MESSAGE_DELETED,
+                event
+            );
         }
+        catch (error) {
+            console.error(
+                "Failed to process message-deleted event:",
+                error
+            );
+        }
+    }
     );
-    
-    console.log( `Subscribed to ${REALTIME_CHANNELS.MESSAGE_DELETED}`);
-    
+
+    console.log(`Subscribed to ${REALTIME_CHANNELS.MESSAGE_DELETED}`);
+
+    await subscribeToChannel(REALTIME_CHANNELS.REACTION_UPDATED, (rawMessage) => {
+
+        try {
+            const event = JSON.parse(rawMessage) as ReactionUpdatedEvent;
+
+            if (!event.conversationId || !event.messageId) {
+                console.error("Invalid reaction-updated event");
+                return;
+            }
+
+            io.to(`conversation:${event.conversationId}`).emit(SOCKET_EVENTS.REACTION_UPDATED, event);
+        }
+        catch (error) {
+            console.error(
+                "Failed to process reaction-updated event:",
+                error
+            );
+        }
+    }
+    );
+
+    console.log(
+        `Subscribed to ${REALTIME_CHANNELS.REACTION_UPDATED}`
+    );
+
 };
