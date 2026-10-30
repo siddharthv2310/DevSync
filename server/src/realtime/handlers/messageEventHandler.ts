@@ -36,6 +36,7 @@ interface MessageReadEvent {
     readAt: string;
 }
 
+
 export const subscribeToMessageEvents = async (io: Server) => {
     const subscribeToMessageEvent = async (channel: string, socketEvent: string) => {
 
@@ -192,6 +193,17 @@ export const subscribeToMessageEvents = async (io: Server) => {
     console.log(
         `Subscribed to ${REALTIME_CHANNELS.MESSAGE_READ}`
     );
+
+
+    await subscribeToMessageEvent(
+        REALTIME_CHANNELS.MESSAGE_PINNED,
+        SOCKET_EVENTS.MESSAGE_PINNED
+      );
+      
+      await subscribeToMessageEvent(
+        REALTIME_CHANNELS.MESSAGE_UNPINNED,
+        SOCKET_EVENTS.MESSAGE_UNPINNED
+      );
 
 
 };

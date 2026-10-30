@@ -5,6 +5,9 @@ export const REALTIME_CHANNELS = {
     REACTION_UPDATED: "realtime:reaction:updated",
     THREAD_REPLY_CREATED: "realtime:thread:reply:created",
     MESSAGE_READ: "realtime:message:read",
+
+    MESSAGE_PINNED: "realtime:message:pinned",
+    MESSAGE_UNPINNED: "realtime:message:unpinned",
 }as const ;
 
 export const SOCKET_EVENTS = {
@@ -14,5 +17,8 @@ export const SOCKET_EVENTS = {
     REACTION_UPDATED: "reaction:updated",
     THREAD_REPLY_CREATED: "thread:reply:created",
     MESSAGE_READ: "message:read",
+
+    MESSAGE_PINNED: "message:pinned",
+    MESSAGE_UNPINNED: "message:unpinned",
 } as const;
 

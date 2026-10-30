@@ -819,7 +819,20 @@ export const pinMessage = async (userId: string, messageId: string): Promise<Mes
         include: messageInclude,
     });
 
-    return toMessageResponse(updatedMessage);
+    const response = toMessageResponse(updatedMessage);
+
+    // Publish realtime event
+    try {
+        await publishEvent(REALTIME_CHANNELS.MESSAGE_PINNED, {
+            conversationId: message.conversationId,
+            message: response,
+        });
+    } 
+    catch (error) {
+        console.error("Failed to publish message-pinned event:", error);
+    }
+
+    return response;
 };
 
 
@@ -885,7 +898,20 @@ export const unpinMessage = async (userId: string, messageId: string): Promise<M
         include: messageInclude,
     });
 
-    return toMessageResponse(updatedMessage);
+    const response = toMessageResponse(updatedMessage);
+
+    // Publish realtime event
+    try {
+      await publishEvent(REALTIME_CHANNELS.MESSAGE_UNPINNED, {
+        conversationId: message.conversationId,
+        message: response,
+      });
+    } 
+    catch (error) {
+      console.error("Failed to publish message-unpinned event:", error);
+    }
+    
+    return response;
 };
 
 

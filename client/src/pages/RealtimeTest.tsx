@@ -39,6 +39,7 @@ interface TypingEvent {
   userId: string;
 }
 
+
 export default function RealtimeTest() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [connected, setConnected] = useState(false);
@@ -92,22 +93,22 @@ export default function RealtimeTest() {
 
   useEffect(() => {
     const handleConnect = () => {
-        const isReconnection = hasConnectedBefore.current;
-      
-        console.log(
-          isReconnection ? "Socket reconnected" : "Socket connected",
-          {
-            recovered: socket.recovered,
-          }
-        );
-      
-        hasConnectedBefore.current = true;
-      
-        setConnected(true);
-        setJoined(false);
-      
-        socket.emit("conversation:join", CONVERSATION_ID);
-      };
+      const isReconnection = hasConnectedBefore.current;
+
+      console.log(
+        isReconnection ? "Socket reconnected" : "Socket connected",
+        {
+          recovered: socket.recovered,
+        }
+      );
+
+      hasConnectedBefore.current = true;
+
+      setConnected(true);
+      setJoined(false);
+
+      socket.emit("conversation:join", CONVERSATION_ID);
+    };
 
     const handleJoined = (data: { conversationId: string }) => {
       if (data.conversationId !== CONVERSATION_ID) return;
@@ -133,10 +134,10 @@ export default function RealtimeTest() {
         previous.map((message) =>
           message.id === event.messageId
             ? {
-                ...message,
-                deletedAt: event.deletedAt,
-                deletedById: event.deletedById,
-              }
+              ...message,
+              deletedAt: event.deletedAt,
+              deletedById: event.deletedById,
+            }
             : message
         )
       );
@@ -172,29 +173,44 @@ export default function RealtimeTest() {
 
     const handleTypingStarted = (event: TypingEvent) => {
       if (event.conversationId !== CONVERSATION_ID) return;
-    
+
       console.log("TYPING STARTED:", {
         ...event,
         time: new Date().toISOString(),
       });
     };
-    
+
     const handleTypingStopped = (event: TypingEvent) => {
       if (event.conversationId !== CONVERSATION_ID) return;
-    
+
       console.log("TYPING STOPPED:", {
         ...event,
         time: new Date().toISOString(),
       });
     };
-    
+
     const handleTypingError = (event: {
       conversationId: string;
       message: string;
     }) => {
       console.error("TYPING ERROR:", event);
     };
+
+    const handleMessagePinned = (message: Message) => {
+      if (message.conversationId !== CONVERSATION_ID) return;
     
+      console.log("MESSAGE PINNED EVENT RECEIVED:", message);
+    
+      mergeMessages([message]);
+    };
+
+    const handleMessageUnpinned = (message: Message) => {
+      if (message.conversationId !== CONVERSATION_ID) return;
+    
+      console.log("MESSAGE UNPINNED EVENT RECEIVED:", message);
+    
+      mergeMessages([message]);
+    };
 
     socket.on("connect", handleConnect);
     socket.on("conversation:joined", handleJoined);
@@ -210,6 +226,9 @@ export default function RealtimeTest() {
     socket.on("typing:started", handleTypingStarted);
     socket.on("typing:stopped", handleTypingStopped);
     socket.on("typing:error", handleTypingError);
+
+    socket.on("message:pinned", handleMessagePinned);
+    socket.on("message:unpinned", handleMessageUnpinned);
 
     if (!socket.connected) {
       socket.connect();
@@ -233,6 +252,9 @@ export default function RealtimeTest() {
       socket.off("typing:stopped", handleTypingStopped);
       socket.off("typing:error", handleTypingError);
 
+      socket.off("message:pinned", handleMessagePinned);
+      socket.off("message:unpinned", handleMessageUnpinned);
+
       socket.disconnect();
     };
   }, [loadMessages, mergeMessages]);
@@ -240,21 +262,21 @@ export default function RealtimeTest() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="mx-auto max-w-2xl">
-  
+
         <h1 className="mb-4 text-2xl font-bold">
           DevSync Realtime Messages
         </h1>
-  
+
         {/* Connection and room status */}
         <p className="mb-6">
           Connection: {connected ? "🟢 Connected" : "🔴 Disconnected"}
           {" | "}
           Room: {joined ? "Joined" : "Not joined"}
         </p>
-  
+
         {/* ADD YOUR BUTTONS HERE */}
         <div className="mb-6 flex flex-wrap gap-3">
-  
+
           <button
             onClick={() => socket.emit("typing:start", CONVERSATION_ID)}
             disabled={!connected || !joined}
@@ -262,7 +284,7 @@ export default function RealtimeTest() {
           >
             Start Typing
           </button>
-  
+
           <button
             onClick={() => socket.emit("typing:stop", CONVERSATION_ID)}
             disabled={!connected || !joined}
@@ -270,7 +292,7 @@ export default function RealtimeTest() {
           >
             Stop Typing
           </button>
-  
+
           <button
             onClick={() => {
               socket.emit("conversation:leave", CONVERSATION_ID);
@@ -281,7 +303,7 @@ export default function RealtimeTest() {
           >
             Leave Room
           </button>
-  
+
           <button
             onClick={() => {
               socket.emit("conversation:join", CONVERSATION_ID);
@@ -291,7 +313,7 @@ export default function RealtimeTest() {
           >
             Rejoin Room
           </button>
-  
+
           <button
             onClick={() => socket.disconnect()}
             disabled={!connected}
@@ -299,7 +321,7 @@ export default function RealtimeTest() {
           >
             Disconnect
           </button>
-  
+
           <button
             onClick={() => socket.connect()}
             disabled={connected}
@@ -307,19 +329,19 @@ export default function RealtimeTest() {
           >
             Reconnect
           </button>
-  
+
         </div>
-  
+
         {/* Existing loading and error messages */}
         {loading && <p className="mb-3">Loading message history...</p>}
-  
+
         {error && <p className="mb-3 text-red-600">{error}</p>}
-  
+
         {/* Your existing messages list */}
         <div className="space-y-3">
           {/* Keep your existing messages.map() code here */}
         </div>
-  
+
       </div>
     </div>
   );
