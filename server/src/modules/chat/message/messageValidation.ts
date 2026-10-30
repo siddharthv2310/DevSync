@@ -100,7 +100,18 @@ export const markMessagesAsReadSchema = z.object({
 });
 
 
+export const getPinnedMessagesQuerySchema = z.object({
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(50),
+  });
+
+
 export type CreateMessageInput = z.infer<typeof createMessageSchema>;
 export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
 export type GetMessagesQuery = z.infer<typeof getMessagesQuerySchema>;
 export type MarkMessagesAsReadInput = z.infer<typeof markMessagesAsReadSchema>;
+export type GetPinnedMessagesQuery = z.infer<typeof getPinnedMessagesQuerySchema>;

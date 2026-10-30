@@ -763,3 +763,62 @@ export const getMessageReadReceipts = async (userId: string,messageId: string) =
         readerCount: receipts.length,
     };
 };
+
+export const pinMessage = async (
+    userId: string,
+    messageId: string
+  ): Promise<MessageResponse> => {
+  
+    // 1. Find the message
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: {
+        id: true,
+        conversationId: true,
+        pinnedAt: true,
+        deletedAt: true,
+      },
+    });
+  
+    if (!message) {
+      throw new ApiErrors(404, "Message not found");
+    }
+  
+    // 2. Verify conversation access
+    await requireConversationAccess(message.conversationId, userId);
+  
+    // 3. Deleted messages cannot be pinned
+    if (message.deletedAt) {
+      throw new ApiErrors(400, "Deleted messages cannot be pinned");
+    }
+  
+    // 4. Prevent duplicate pinning
+    if (message.pinnedAt) {
+      throw new ApiErrors(409, "Message is already pinned");
+    }
+  
+    // 5. Atomic update to protect against concurrent requests
+    const result = await prisma.message.updateMany({
+      where: {
+        id: messageId,
+        pinnedAt: null,
+        deletedAt: null,
+      },
+      data: {
+        pinnedAt: new Date(),
+        pinnedById: userId,
+      },
+    });
+  
+    if (result.count === 0) {
+      throw new ApiErrors(409, "Message could not be pinned. It may have changed.");
+    }
+  
+    // 6. Fetch updated message
+    const updatedMessage = await prisma.message.findUniqueOrThrow({
+      where: { id: messageId },
+      include: messageInclude,
+    });
+  
+    return toMessageResponse(updatedMessage);
+  };
