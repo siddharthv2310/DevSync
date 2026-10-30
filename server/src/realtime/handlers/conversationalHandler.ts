@@ -3,16 +3,9 @@ import { Server } from "socket.io";
 import { authenticatedSocket } from "../socketTypes.js";
 import { requireConversationAccess } from "../../modules/chat/chatPermissions.js";
 
-export const joinConversationalRoom = async (
-    io: Server,
-    socket: authenticatedSocket,
-    conversationId: string
-) => {
+export const joinConversationalRoom = async ( io: Server,socket: authenticatedSocket,conversationId: string) => {
     try {
-        await requireConversationAccess(
-            conversationId,
-            socket.userId
-        );
+        await requireConversationAccess(conversationId,socket.userId);
 
         const room = `conversation:${conversationId}`;
 
@@ -25,7 +18,8 @@ export const joinConversationalRoom = async (
         socket.emit("conversation:joined", {
             conversationId,
         });
-    } catch (error) {
+    } 
+    catch (error) {
         socket.emit("conversation:error", {
             conversationId,
             message:
@@ -36,11 +30,8 @@ export const joinConversationalRoom = async (
     }
 };
 
-export const leaveConversationalRoom = (
-    io: Server,
-    socket: authenticatedSocket,
-    conversationId: string
-) => {
+export const leaveConversationalRoom = (io: Server,socket: authenticatedSocket,conversationId: string) => {
+    
     const room = `conversation:${conversationId}`;
 
     socket.leave(room);
