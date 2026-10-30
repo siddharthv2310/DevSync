@@ -4,7 +4,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 import * as messageServices from "./messageServices.js"
 
-import { conversationIdParamSchema, createMessageSchema, getMessagesQuerySchema, markMessagesAsReadSchema, messageIdParamSchema, updateMessageSchema } from "./messageValidation.js";
+import { conversationIdParamSchema, createMessageSchema, getMessagesQuerySchema, getPinnedMessagesQuerySchema, markMessagesAsReadSchema, messageIdParamSchema, updateMessageSchema } from "./messageValidation.js";
 
 
 export const createMessageController = async (req: Request, res: Response, next: NextFunction) => {
@@ -169,8 +169,8 @@ export const deleteMessageController = async (req: Request, res: Response, next:
 
 
 
-export const markMessagesAsReadController = async (req: Request,res: Response,next: NextFunction) => {
-    
+export const markMessagesAsReadController = async (req: Request, res: Response, next: NextFunction) => {
+
     try {
         const userId = req.user?.userId;
 
@@ -193,14 +193,14 @@ export const markMessagesAsReadController = async (req: Request,res: Response,ne
             message: "Read receipts updated successfully",
             data: result,
         });
-    } 
+    }
     catch (error) {
         next(error);
     }
 };
 
 
-export const getMessageReadReceiptsController = async ( req: Request, res: Response, next: NextFunction) => {
+export const getMessageReadReceiptsController = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.user?.userId;
 
@@ -210,14 +210,88 @@ export const getMessageReadReceiptsController = async ( req: Request, res: Respo
 
         const { messageId } = messageIdParamSchema.parse(req.params);
 
-        const result = await messageServices.getMessageReadReceipts( userId, messageId);
+        const result = await messageServices.getMessageReadReceipts(userId, messageId);
 
         return res.status(200).json({
             success: true,
             data: result,
         });
-    } 
+    }
     catch (error) {
         next(error);
     }
 };
+
+export const pinMessageController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new ApiErrors(401, "Authentication required");
+        }
+
+        const { messageId } = messageIdParamSchema.parse(req.params);
+
+        const message = await messageServices.pinMessage(userId, messageId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Message pinned successfully",
+            data: message,
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+
+
+export const unpinMessageController = async ( req: Request, res: Response, next: NextFunction ) => {
+    try {
+      const userId = req.user?.userId;
+  
+      if (!userId) {
+        throw new ApiErrors(401, "Authentication required");
+      }
+  
+      const { messageId } = messageIdParamSchema.parse(req.params);
+  
+      const message = await messageServices.unpinMessage(userId,messageId);
+  
+      return res.status(200).json({
+        success: true,
+        message: "Message unpinned successfully",
+        data: message,
+      });
+    } 
+    catch (error) {
+      next(error);
+    }
+  };
+
+
+  export const getPinnedMessagesController = async ( req: Request, res: Response, next: NextFunction ) => {
+    try {
+      const userId = req.user?.userId;
+  
+      if (!userId) {
+        throw new ApiErrors(401, "Authentication required");
+      }
+  
+      const { conversationId } = conversationIdParamSchema.parse(
+        req.params
+      );
+  
+      const query = getPinnedMessagesQuerySchema.parse(req.query);
+  
+      const result = await messageServices.getPinnedMessages( userId, conversationId, query);
+  
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } 
+    catch (error) {
+      next(error);
+    }
+  };

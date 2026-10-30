@@ -4,7 +4,7 @@ import prisma from "../../../config/prisma.js";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import { canModerateConversationMessage, requireConversationAccess, validateMentionedUsers } from "../chatPermissions.js";
 import { MessageListResponse, MessageResponse } from "./messgeType.js";
-import { CreateMessageInput, GetMessagesQuery, UpdateMessageInput } from "./messageValidation.js";
+import { CreateMessageInput, GetMessagesQuery, GetPinnedMessagesQuery, UpdateMessageInput } from "./messageValidation.js";
 import { decodeCursor, encodeCursor } from "../../../utils/cursorPagination.js";
 import { publishEvent } from "../../../realtime/redis/redisPubSub.js";
 import { REALTIME_CHANNELS } from "../../../realtime/socketEvents.js";
@@ -609,6 +609,8 @@ export const deleteMessage = async (userId: string, messageId: string): Promise<
         data: {
             deletedAt,
             deletedById: userId,
+            pinnedAt: null,
+            pinnedById: null,
         },
     });
 
@@ -631,7 +633,7 @@ export const deleteMessage = async (userId: string, messageId: string): Promise<
 
 // mark message as read 
 
-export const markMessagesAsRead = async ( userId: string,conversationId: string,input: MarkMessagesAsReadInput ) => {
+export const markMessagesAsRead = async (userId: string, conversationId: string, input: MarkMessagesAsReadInput) => {
     await requireConversationAccess(conversationId, userId);
 
     const { messageIds } = input;
@@ -650,14 +652,14 @@ export const markMessagesAsRead = async ( userId: string,conversationId: string,
     });
 
     if (messages.length !== messageIds.length) {
-        throw new ApiErrors(404,"One or more messages were not found in this conversation");
+        throw new ApiErrors(404, "One or more messages were not found in this conversation");
     }
 
     // Users should not create read receipts for their own messages.
-    const eligibleMessageIds = messages.filter( (message) =>
-            message.senderId !== userId &&
-            message.deletedAt === null
-        )
+    const eligibleMessageIds = messages.filter((message) =>
+        message.senderId !== userId &&
+        message.deletedAt === null
+    )
         .map((message) => message.id);
 
     if (eligibleMessageIds.length === 0) {
@@ -716,7 +718,7 @@ export const markMessagesAsRead = async ( userId: string,conversationId: string,
     };
 };
 
-export const getMessageReadReceipts = async (userId: string,messageId: string) => {
+export const getMessageReadReceipts = async (userId: string, messageId: string) => {
     const message = await prisma.message.findUnique({
         where: { id: messageId },
         select: {
@@ -729,7 +731,7 @@ export const getMessageReadReceipts = async (userId: string,messageId: string) =
         throw new ApiErrors(404, "Message not found");
     }
 
-    await requireConversationAccess( message.conversationId, userId);
+    await requireConversationAccess(message.conversationId, userId);
 
     const receipts = await prisma.messageRead.findMany({
         where: {
@@ -764,61 +766,152 @@ export const getMessageReadReceipts = async (userId: string,messageId: string) =
     };
 };
 
-export const pinMessage = async (
-    userId: string,
-    messageId: string
-  ): Promise<MessageResponse> => {
-  
+export const pinMessage = async (userId: string, messageId: string): Promise<MessageResponse> => {
+
     // 1. Find the message
     const message = await prisma.message.findUnique({
-      where: { id: messageId },
-      select: {
-        id: true,
-        conversationId: true,
-        pinnedAt: true,
-        deletedAt: true,
-      },
+        where: { id: messageId },
+        select: {
+            id: true,
+            conversationId: true,
+            pinnedAt: true,
+            deletedAt: true,
+        },
     });
-  
+
     if (!message) {
-      throw new ApiErrors(404, "Message not found");
+        throw new ApiErrors(404, "Message not found");
     }
-  
+
     // 2. Verify conversation access
     await requireConversationAccess(message.conversationId, userId);
-  
+
     // 3. Deleted messages cannot be pinned
     if (message.deletedAt) {
-      throw new ApiErrors(400, "Deleted messages cannot be pinned");
+        throw new ApiErrors(400, "Deleted messages cannot be pinned");
     }
-  
+
     // 4. Prevent duplicate pinning
     if (message.pinnedAt) {
-      throw new ApiErrors(409, "Message is already pinned");
+        throw new ApiErrors(409, "Message is already pinned");
     }
-  
+
     // 5. Atomic update to protect against concurrent requests
     const result = await prisma.message.updateMany({
-      where: {
-        id: messageId,
-        pinnedAt: null,
-        deletedAt: null,
-      },
-      data: {
-        pinnedAt: new Date(),
-        pinnedById: userId,
-      },
+        where: {
+            id: messageId,
+            pinnedAt: null,
+            deletedAt: null,
+        },
+        data: {
+            pinnedAt: new Date(),
+            pinnedById: userId,
+        },
     });
-  
+
     if (result.count === 0) {
-      throw new ApiErrors(409, "Message could not be pinned. It may have changed.");
+        throw new ApiErrors(409, "Message could not be pinned. It may have changed.");
     }
-  
+
     // 6. Fetch updated message
     const updatedMessage = await prisma.message.findUniqueOrThrow({
-      where: { id: messageId },
-      include: messageInclude,
+        where: { id: messageId },
+        include: messageInclude,
     });
-  
+
     return toMessageResponse(updatedMessage);
-  };
+};
+
+
+export const unpinMessage = async (userId: string, messageId: string): Promise<MessageResponse> => {
+
+    // 1. Find the message
+    const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        select: {
+            id: true,
+            conversationId: true,
+            pinnedAt: true,
+            pinnedById: true,
+        },
+    });
+
+    if (!message) {
+        throw new ApiErrors(404, "Message not found");
+    }
+
+    // 2. Verify conversation access
+    await requireConversationAccess(message.conversationId, userId);
+
+    // 3. Message must already be pinned
+    if (!message.pinnedAt) {
+        throw new ApiErrors(400, "Message is not pinned");
+    }
+
+    // 4. Only the original pinner or a moderator can unpin
+    if (message.pinnedById !== userId) {
+        const canModerate = await canModerateConversationMessage(
+            message.conversationId,
+            userId
+        );
+
+        if (!canModerate) {
+            throw new ApiErrors(
+                403,
+                "You can only unpin your own pinned messages"
+            );
+        }
+    }
+
+    // 5. Atomic unpin operation
+    const result = await prisma.message.updateMany({
+        where: {
+            id: messageId,
+            pinnedAt: { not: null },
+        },
+        data: {
+            pinnedAt: null,
+            pinnedById: null,
+        },
+    });
+
+    if (result.count === 0) {
+        throw new ApiErrors(409, "Message is no longer pinned");
+    }
+
+    // 6. Fetch updated message
+    const updatedMessage = await prisma.message.findUniqueOrThrow({
+        where: { id: messageId },
+        include: messageInclude,
+    });
+
+    return toMessageResponse(updatedMessage);
+};
+
+
+
+export const getPinnedMessages = async (userId: string, conversationId: string, query: GetPinnedMessagesQuery) => {
+
+    // 1. Verify conversation access
+    await requireConversationAccess(conversationId, userId);
+
+    // 2. Fetch pinned messages
+    const messages = await prisma.message.findMany({
+        where: {
+            conversationId,
+            pinnedAt: { not: null },
+            deletedAt: null,
+        },
+        orderBy: {
+            pinnedAt: "desc",
+        },
+        take: query.limit,
+        include: messageInclude,
+    });
+
+    // 3. Convert to API response
+    return {
+        messages: messages.map(toMessageResponse),
+        count: messages.length,
+    };
+};
