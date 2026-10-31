@@ -74,29 +74,30 @@ model User {
   joinRequests        OrganizationJoinRequest[]
   reviewedJoinRequest OrganizationJoinRequest[] @relation("JoinRequestReviewer")
 
-  projectMemberships ProjectMember[]
-  oauthAccounts      OAuthAccount[]
-  teamMemberships    TeamMember[]
-  teamJoinRequests   TeamJoinRequest[]
-  reviewedTeamJoinRequest TeamJoinRequest[] @relation("teamJoinRequestReviewer")
-  conversationReadStates ConversationReadState[]
+  projectMemberships      ProjectMember[]
+  oauthAccounts           OAuthAccount[]
+  teamMemberships         TeamMember[]
+  teamJoinRequests        TeamJoinRequest[]
+  reviewedTeamJoinRequest TeamJoinRequest[]       @relation("teamJoinRequestReviewer")
+  conversationReadStates  ConversationReadState[]
 
-  teamInvitationRecieved TeamInvitation[]  @relation("TeamInvitationsReceived")
-  teamInvitationsSent TeamInvitation[] @relation("TeamInvitationsSent")
-
+  teamInvitationRecieved TeamInvitation[] @relation("TeamInvitationsReceived")
+  teamInvitationsSent    TeamInvitation[] @relation("TeamInvitationsSent")
 
   conversationMembers ConversationMember[] @relation("conversationMembers")
-  sentMessages Message[]  @relation("messageSender")
-  deletedMessages Message[] @relation("messageDeleter")
-  pinnedMessages Message[]  @relation("messagePinner")
-  messageReactions MessageReaction[] @relation("messageReactions")
-  messageReads MessageRead[] @relation("messageReaders")
-  messageMentions MessageMention[] @relation("messageMentions")
-  attachmentUploads AttachmentUpload[]
+  sentMessages        Message[]            @relation("messageSender")
+  deletedMessages     Message[]            @relation("messageDeleter")
+  pinnedMessages      Message[]            @relation("messagePinner")
+  messageReactions    MessageReaction[]    @relation("messageReactions")
+  messageReads        MessageRead[]        @relation("messageReaders")
+  messageMentions     MessageMention[]     @relation("messageMentions")
+  attachmentUploads   AttachmentUpload[]
 
   uploadedAttachments MessageAttachment[] @relation("messageAttachmentUploader")
 
-
+  notification          Notification[]     @relation("notificationRecipient")
+  triggeredNotification Notification[]     @relation("notificationActor")
+  pushSubscription      PushSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -179,7 +180,6 @@ model OrganizationInvitation {
   status InvitationStatus @default(PENDING)
 
   respondedAt DateTime?
-
 
   @@unique([organizationId, email])
   @@index([email])
@@ -270,8 +270,8 @@ model Team {
 
   isActive Boolean @default(true)
 
-  members TeamMember[]
-  invitations TeamInvitation[]
+  members      TeamMember[]
+  invitations  TeamInvitation[]
   joinRequests TeamJoinRequest[]
 
   conversations Conversation[]
@@ -304,17 +304,17 @@ model TeamMember {
   @@index([userId])
 }
 
-model TeamInvitation{
+model TeamInvitation {
   id String @id @default(uuid())
 
-  teamId String 
-  team Team @relation(fields:[teamId] , references:[id],onDelete:Cascade)
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   invitedUserId String
-  inviteduser User @relation("TeamInvitationsReceived" ,fields:[invitedUserId],references:[id],onDelete:Cascade)
+  inviteduser   User   @relation("TeamInvitationsReceived", fields: [invitedUserId], references: [id], onDelete: Cascade)
 
   invitedById String
-  invitedBy User @relation("TeamInvitationsSent" , fields:[invitedById],references:[id],onDelete:Cascade)
+  invitedBy   User   @relation("TeamInvitationsSent", fields: [invitedById], references: [id], onDelete: Cascade)
 
   tokenHash String @unique
 
@@ -335,15 +335,14 @@ model TeamInvitation{
   @@index([expiresAt])
 }
 
-
-model TeamJoinRequest{
+model TeamJoinRequest {
   id String @id @default(uuid())
 
-  teamId String 
-  team Team @relation(fields:[teamId] ,references:[id],onDelete:Cascade)
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   userId String
-  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   reviewedById String?
   reviewedBy   User?   @relation("teamJoinRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
@@ -357,26 +356,24 @@ model TeamJoinRequest{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([teamId,userId])
-  @@index([teamId,status])
-  @@index([userId , status])
+  @@unique([teamId, userId])
+  @@index([teamId, status])
+  @@index([userId, status])
 }
 
-
-
-model Conversation{
+model Conversation {
   id String @id @default(uuid())
 
   type ConversationType
 
-  organizationId String? 
-  organization Organization? @relation(fields :[organizationId] , references:[id] , onDelete:Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   teamId String? @unique
-  team Team? @relation(fields:[teamId],references:[id],onDelete:Cascade)
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  projectId String? @unique
-  project Project? @relation(fields : [projectId] , references:[id] , onDelete:Cascade)
+  projectId String?  @unique
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   // Used for 1-to-1 direct messages.
   // Generated from the two user IDs in sorted order.
@@ -384,8 +381,8 @@ model Conversation{
 
   name String?
 
-  members ConversationMember[]
-  messages Message[]
+  members    ConversationMember[]
+  messages   Message[]
   readStates ConversationReadState[]
 
   attachmentUploads AttachmentUpload[]
@@ -397,21 +394,20 @@ model Conversation{
   @@index([organizationId])
   @@index([teamId])
   @@index([projectId])
-
 }
 
-model ConversationMember{
+model ConversationMember {
   id String @id @default(uuid())
 
   conversationId String
-  conversation Conversation @relation(fields : [conversationId] , references:[id] , onDelete:Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   userId String
-  user User @relation("conversationMembers",fields:[userId] , references:[id],onDelete:Cascade)
+  user   User   @relation("conversationMembers", fields: [userId], references: [id], onDelete: Cascade)
 
   joinedAt DateTime @default(now())
 
-  isMuted Boolean @default(false)
+  isMuted    Boolean   @default(false)
   mutedUntil DateTime?
 
   createdAt DateTime @default(now())
@@ -426,13 +422,13 @@ model ConversationReadState {
   id String @id @default(uuid())
 
   conversationId String
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   lastReadMessageId String?
-  lastReadAt DateTime?
+  lastReadAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -442,37 +438,37 @@ model ConversationReadState {
   @@index([conversationId])
 }
 
-model Message{
+model Message {
   id String @id @default(uuid())
 
   conversationId String
-  conversation Conversation @relation(fields:[conversationId],references:[id],onDelete:Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   senderId String
-  sender User @relation("messageSender" , fields:[senderId],references:[id],onDelete:Cascade)
+  sender   User   @relation("messageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
   type MessageType @default(TEXT)
 
   content String?
 
   replyToId String?
-  replyTo Message? @relation("messageReplies",fields:[replyToId],references:[id],onDelete:SetNull)
-  replies Message[] @relation("messageReplies")
+  replyTo   Message?  @relation("messageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("messageReplies")
 
-  threadRootId String?
-  threadRoot Message? @relation("messageThreadRoot" , fields:[threadRootId] , references:[id] , onDelete:SetNull)
+  threadRootId  String?
+  threadRoot    Message?  @relation("messageThreadRoot", fields: [threadRootId], references: [id], onDelete: SetNull)
   threadMessage Message[] @relation("messageThreadRoot")
 
   isEdited Boolean   @default(false)
   editedAt DateTime?
 
-  deletedAt DateTime?
-  deletedById String? 
-  deletedBy User? @relation("messageDeleter", fields:[deletedById],references:[id],onDelete:SetNull)
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("messageDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
 
-  pinnedAt DateTime?
+  pinnedAt   DateTime?
   pinnedById String?
-  pinnedBy User? @relation("messagePinner" , fields:[pinnedById],references:[id],onDelete:SetNull)
+  pinnedBy   User?     @relation("messagePinner", fields: [pinnedById], references: [id], onDelete: SetNull)
 
   attachments MessageAttachment[]
   reactions   MessageReaction[]
@@ -488,14 +484,14 @@ model Message{
   @@index([replyToId])
 }
 
-model MessageReaction{
+model MessageReaction {
   id String @id @default(uuid())
 
   messageId String
   message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User @relation("messageReactions", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("messageReactions", fields: [userId], references: [id], onDelete: Cascade)
 
   emoji String
 
@@ -505,14 +501,14 @@ model MessageReaction{
   @@index([messageId])
 }
 
-model MessageRead{
+model MessageRead {
   id String @id @default(uuid())
 
   messageId String
   message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User @relation("messageReaders", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("messageReaders", fields: [userId], references: [id], onDelete: Cascade)
 
   readAt DateTime @default(now())
 
@@ -520,18 +516,18 @@ model MessageRead{
   @@index([userId])
 }
 
-model MessageMention{
+model MessageMention {
   id String @id @default(uuid())
 
   messageId String
-  message Message @relation(fields:[messageId],references:[id],onDelete:Cascade)
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User @relation("messageMentions", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("messageMentions", fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
-  @@unique([messageId , userId])
+  @@unique([messageId, userId])
   @@index([userId])
 }
 
@@ -545,11 +541,11 @@ model MessageAttachment {
   url          String?
   thumbnailUrl String?
   createdAt    DateTime @default(now())
-  
+
   deletionPending Boolean @default(false)
 
   uploadedById String?
-  uploadedBy User? @relation( "messageAttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict )
+  uploadedBy   User?   @relation("messageAttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
@@ -557,29 +553,27 @@ model MessageAttachment {
   @@index([uploadedById])
 }
 
-
-
-model AttachmentUpload{
-  id   String   @id @default(uuid())
-  userId   String
+model AttachmentUpload {
+  id             String @id @default(uuid())
+  userId         String
   conversationId String
 
-  originalName   String
-  storageKey String
-  mimeType   String
-  sizeBytes   Int
+  originalName String
+  storageKey   String
+  mimeType     String
+  sizeBytes    Int
 
-  status   AttachmentUploadStatus  @default(PENDING)
+  status AttachmentUploadStatus @default(PENDING)
 
-  expiresAt      DateTime
-  completedAt    DateTime?
-  consumedAt     DateTime?
+  expiresAt   DateTime
+  completedAt DateTime?
+  consumedAt  DateTime?
 
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([conversationId])
@@ -587,10 +581,64 @@ model AttachmentUpload{
   @@index([expiresAt])
 }
 
+model Notification {
+  id String @id @default(uuid())
 
+  // User who receives the notification
+  recipientId String
+  recipient   User   @relation("notificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
 
+  // User who triggered the notification
+  actorId String?
+  actor   User?   @relation("notificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
+  type NotificationType
 
+  title String
+  body  String
+
+  // Related resource information
+  resourceType String?
+  resourceId   String?
+  actionUrl    String?
+
+  // Additional event-specific information
+  metadata Json?
+
+  // Null means unread
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recipientId, createdAt])
+  @@index([recipientId, readAt, createdAt])
+  @@index([actorId])
+}
+
+model PushSubscription {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint String @unique
+
+  p256dh String
+  auth   String
+
+  expirationTime DateTime?
+
+  userAgent  String?
+  deviceName String?
+
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
 
 enum AuthProvider {
   EMAIL
@@ -644,31 +692,43 @@ enum TeamInvitationStatus {
   EXPIRED
 }
 
-enum TeamJoinRequestStatus{
+enum TeamJoinRequestStatus {
   PENDING
   APPROVED
   REJECTED
   CANCELLED
 }
 
-enum ConversationType{
+enum ConversationType {
   ORGANIZATION
   TEAM
   PROJECT
   DIRECT
 }
 
-enum MessageType{
+enum MessageType {
   TEXT
   IMAGE
   FILE
   SYSTEM
 }
 
-enum AttachmentUploadStatus{
+enum AttachmentUploadStatus {
   PENDING
   COMPLETED
   CONSUMED
   FAILED
   EXPIRED
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  MENTION
+  COMMENT
+  MEETING_STARTED
+  TEAM_INVITATION
+  ORGANIZATION_INVITATION
+  FILE_UPLOADED
+  JOIN_REQUEST_APPROVED
+  JOIN_REQUEST_REJECTED
 }
