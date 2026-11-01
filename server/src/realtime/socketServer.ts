@@ -8,6 +8,7 @@ import { handleDisconnect } from "./handlers/disconnectHandler.js";
 import { joinConversationalRoom, leaveConversationalRoom } from "./handlers/conversationalHandler.js";
 import { subscribeToMessageEvents } from "./handlers/messageEventHandler.js";
 import { clearTypingStatus, handleTypingStart, handleTypingStop } from "./handlers/typingHandler.js";
+import { subscribeToNotificationEvents } from "./handlers/notificationHandler.js";
 
 
 export const createSocketServer = (httpServer: HttpServer) => {
@@ -24,7 +25,8 @@ export const createSocketServer = (httpServer: HttpServer) => {
 
     void subscribeToMessageEvents(io)
 
-    
+    void subscribeToNotificationEvents(io)
+
 
     io.on("connection",(socket)=>{
         const authenticatedSocket = socket as authenticatedSocket;
@@ -53,6 +55,8 @@ export const createSocketServer = (httpServer: HttpServer) => {
         socket.on("typing:stop",(conversationId:string)=>{
             void handleTypingStop(io,authenticatedSocket,conversationId)
         })
+
+
     
     })
 

@@ -8,6 +8,8 @@ export const REALTIME_CHANNELS = {
 
     MESSAGE_PINNED: "realtime:message:pinned",
     MESSAGE_UNPINNED: "realtime:message:unpinned",
+
+    NOTIFICATION_CREATED: "realtime:notification:created",
 }as const ;
 
 export const SOCKET_EVENTS = {
@@ -20,5 +22,11 @@ export const SOCKET_EVENTS = {
 
     MESSAGE_PINNED: "message:pinned",
     MESSAGE_UNPINNED: "message:unpinned",
-} as const;
+
+    NOTIFICATION_NEW: "notification:new",
+    NOTIFICATION_READ: "notification:read",
+    NOTIFICATION_READ_ALL: "notification:read-all",
+    NOTIFICATION_DELETED: "notification:deleted",
+    NOTIFICATION_UNREAD_COUNT_UPDATED: "notification:unread-count-updated",
+    } as const;
 
