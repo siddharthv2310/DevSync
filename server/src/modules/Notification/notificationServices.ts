@@ -3,6 +3,9 @@ import prisma from "../../config/prisma.js";
 import { Prisma } from "@prisma/client";
 import type { NotificationType } from "@prisma/client";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
+import { publishEvent } from "../../realtime/redis/redisPubSub.js";
+import { REALTIME_CHANNELS } from "../../realtime/socketEvents.js";
+import { sendWebPushNotification } from "./notificationDeliveryService.js";
 
 interface CreateNotificationInput {
     recipientId: string;
@@ -57,6 +60,50 @@ export const createNotification = async (input: CreateNotificationInput ) => {
             metadata: input.metadata ?? Prisma.JsonNull,
         },
     });
+
+    // get updated unread count
+
+    const unreadCount = await prisma.notification.count({
+        where: {
+            recipientId: input.recipientId,
+            readAt: null,
+        },
+    });
+
+    // prepare delivery task
+
+    const deliveryTasks = await Promise.allSettled([
+        publishEvent(
+            REALTIME_CHANNELS.NOTIFICATION_CREATED,
+            {
+                userId: input.recipientId,
+                notification,
+                unreadCount,
+            }
+        ),
+
+        sendWebPushNotification({
+            userId: input.recipientId,
+            title: notification.title,
+            body: notification.body,
+            notificationId: notification.id,
+            actionUrl: notification.actionUrl!,
+        }),
+    ]);
+
+    // Log delivery failures without losing the notification
+
+    deliveryTasks.forEach((result, index) => {
+        if (result.status === "rejected") {
+            console.error(
+                index === 0
+                    ? "Failed to publish notification to Redis:"
+                    : "Failed to send Web Push notification:",
+                result.reason
+            );
+        }
+    });
+
 
     return notification;
 };

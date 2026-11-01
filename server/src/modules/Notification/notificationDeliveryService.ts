@@ -1,6 +1,5 @@
 import prisma from "../../config/prisma.js";
 import { webPushClient } from "../../config/webPush.js";
-import { getUserPushSubscriptions } from "./notificationServices.js";
 
 interface SendWebPushInput {
     userId: string;
@@ -14,7 +13,18 @@ export const sendWebPushNotification = async (input: SendWebPushInput) => {
 
     const { userId, title, body, notificationId, actionUrl, } = input;
 
-    const subscriptions = await getUserPushSubscriptions(userId);
+    const subscriptions = await prisma.pushSubscription.findMany({
+        where: {
+            userId,
+        },
+        select: {
+            id: true,
+            endpoint: true,
+            p256dh: true,
+            auth: true,
+            expirationTime: true,
+        },
+    });
 
     if (subscriptions.length === 0) {
         return {
@@ -62,14 +72,14 @@ export const sendWebPushNotification = async (input: SendWebPushInput) => {
                         lastUsedAt: new Date(),
                     },
                 });
-            } 
+            }
             catch (error: unknown) {
                 failed++;
 
                 const statusCode =
                     typeof error === "object" &&
-                    error !== null &&
-                    "statusCode" in error
+                        error !== null &&
+                        "statusCode" in error
                         ? (error as { statusCode?: number }).statusCode
                         : undefined;
 
@@ -99,3 +109,4 @@ export const sendWebPushNotification = async (input: SendWebPushInput) => {
         removed,
     };
 };
+
