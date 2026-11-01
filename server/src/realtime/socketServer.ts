@@ -9,6 +9,7 @@ import { joinConversationalRoom, leaveConversationalRoom } from "./handlers/conv
 import { subscribeToMessageEvents } from "./handlers/messageEventHandler.js";
 import { clearTypingStatus, handleTypingStart, handleTypingStop } from "./handlers/typingHandler.js";
 
+
 export const createSocketServer = (httpServer: HttpServer) => {
     const io = new SocketIOServer(httpServer, {
         cors: {
