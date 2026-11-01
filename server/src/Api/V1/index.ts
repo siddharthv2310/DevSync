@@ -15,6 +15,7 @@ import chatMessageRoute from "../../modules/chat/message/index.js"
 import threadRoute from "../../modules/chat/threads/index.js"
 import reactionRoute from "../../modules/chat/reaction/index.js"
 import attachmentRoute from "../../modules/chat/attachment/index.js"
+import notificationRoute from "../../modules/Notification/index.js"
 
 
 const router = Router(); 
@@ -36,5 +37,6 @@ router.use("/chat-message",chatMessageRoute);
 router.use("/chat-thread", threadRoute);
 router.use("/chat-reaction",reactionRoute);
 router.use("/conversations/:conversationId",attachmentRoute);
+router.use("/notifications",notificationRoute);
 
 export default router;
