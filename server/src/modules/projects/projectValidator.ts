@@ -1,61 +1,55 @@
 import { z } from "zod";
 
 export const createProjectSchema = z.object({
-    name: z
-        .string()
-        .trim()
-        .min(1, "project name must contain atleast 2 character")
-        .max(100, "Project name cannot exceed 100 characters"),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Project name must contain at least 2 characters")
+    .max(100, "Project name cannot exceed 100 characters"),
 
-    slug: z
-        .string()
-        .trim()
-        .min(2, "Project slug must contain at least 2 characters")
-        .max(100, "Project slug cannot exceed 100 characters")
-        .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug can only contain lowercase letters, numbers and hyphens"),
+  slug: z
+    .string()
+    .trim()
+    .min(2, "Project slug must contain at least 2 characters")
+    .max(100, "Project slug cannot exceed 100 characters")
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug can contain lowercase letters, numbers, and single hyphens"
+    ),
 
-    description: z
-        .string()
-        .trim()
-        .max(500, "Description cannot exceed 500 characters")
-        .optional(),
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description cannot exceed 500 characters")
+    .optional(),
 
-    avatar: z
-        .string()
-        .url("Avatar must be a valid URL")
-        .optional()
-        .or(z.literal(""))
-
-})
+  avatar: z
+    .string()
+    .url("Avatar must be a valid URL")
+    .or(z.literal(""))
+    .optional()
+    .transform((value) => value || undefined),
+});
 
 export const getProjectsQuerySchema = z.object({
-    page: z.coerce
-        .number()
-        .int()
-        .min(1)
-        .default(1),
+  page: z.coerce.number().int().min(1).default(1),
 
-    limit: z.coerce
-        .number()
-        .int()
-        .min(1)
-        .max(50)
-        .default(20),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
 
-    search: z
-        .string()
-        .trim()
-        .max(100)
-        .optional(),
+  search: z
+    .string()
+    .trim()
+    .max(100, "Search cannot exceed 100 characters")
+    .optional(),
 
-    includeArchived: z.coerce
-        .boolean()
-        .default(false)
-})
-
-
-
-// type
+  includeArchived: z
+    .union([
+      z.boolean(),
+      z.enum(["true", "false"]).transform((value) => value === "true"),
+    ])
+    .default(false),
+});
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+
 export type GetProjectQuery = z.infer<typeof getProjectsQuerySchema>;

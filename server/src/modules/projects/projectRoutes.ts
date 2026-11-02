@@ -7,11 +7,31 @@ import { createProjectController, getProjectDetailsController } from "./projectC
 //import { getOrganizationsController } from "../manageOrganization/Organization/organzationController.js";
 import { getOrganizationProjectsController } from "./projectController.js";
 import { projectMiddleware } from "../../middlewares/projectMiddleware.js";
+import { requireProjectPermission } from "../../middlewares/projectPermissionMiddleware.js";
+import { projectPermission } from "./projectPermissions.js";
 
-const router = Router({mergeParams:true});
+const router = Router({ mergeParams: true });
 
-router.post("/",authMiddleware , organizationMiddleware,requireOrganizationPermission(organizationPermission.CREATE_PROJECT),createProjectController);
-router.get("/",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.VIEW_PROJECT),getOrganizationProjectsController);
-router.get( "/:projectId",authMiddleware, organizationMiddleware,projectMiddleware,getProjectDetailsController);
+router.post("/",
+    authMiddleware,
+    organizationMiddleware,
+    requireOrganizationPermission(organizationPermission.CREATE_PROJECT),
+    createProjectController
+);
+
+router.get("/",
+    authMiddleware,
+    organizationMiddleware,
+    requireOrganizationPermission(organizationPermission.VIEW_PROJECT),
+    getOrganizationProjectsController
+);
+
+router.get("/:projectId",
+    authMiddleware,
+    organizationMiddleware,
+    projectMiddleware,
+    requireProjectPermission(projectPermission.VIEW_PROJECT),
+    getProjectDetailsController
+);
 
 export default router;

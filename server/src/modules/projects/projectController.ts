@@ -1,55 +1,77 @@
-import { Request, Response, NextFunction } from "express";
+
+import { Request, Response } from "express";
 import * as projectServices from "./projectServices.js";
-import { createProjectSchema, getProjectsQuerySchema } from "./projectValidator.js";
+import {createProjectSchema,getProjectsQuerySchema,} from "./projectValidator.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
-export const createProjectController = async (req: Request, res: Response) => {
-    const result = createProjectSchema.safeParse(req.body);
+// Create project
+export const createProjectController = async ( req: Request, res: Response) => {
 
-    if (!result.success) {
-        throw new ApiErrors(400, "invalid data process");
-    }
+  const result = createProjectSchema.safeParse(req.body);
 
-    const organizationId = req.params.organizationId as string;
+  if (!result.success) {
+    throw new ApiErrors(
+      400,
+      result.error.issues.map((issue) => issue.message).join(", ")
+    );
+  }
 
-    const userId = req.user!.userId;
+  const organizationId = req.params.organizationId as string;
+  const userId = req.user!.userId;
 
-    const project = await projectServices.createProject(organizationId, userId, result.data);
+  const project = await projectServices.createProject(
+    organizationId,
+    userId,
+    result.data
+  );
 
-    return res.status(201).json({
-        success: true,
-        message: "Project created successfully",
-        data: project
-    });
-
+  return res.status(201).json({
+    success: true,
+    message: "Project created successfully",
+    data: project,
+  });
 };
 
-export const getOrganizationProjectsController = async (req: Request , res: Response) => {
-    const result = getProjectsQuerySchema.safeParse(req.query);
-    if (!result.success) {
-        throw new ApiErrors(400, "Invalid project query parameters");
-    }
+// Get organization projects
+export const getOrganizationProjectsController = async (req: Request,res: Response) => {
 
-    const organizationId = req.params.organizationId as string;
+  const result = getProjectsQuerySchema.safeParse(req.query);
 
-    const resultData = await projectServices.getOrganizationProjects(organizationId, result.data.page, result.data.limit, result.data.search, result.data.includeArchived);
+  if (!result.success) {
+    throw new ApiErrors(
+      400,
+      result.error.issues.map((issue) => issue.message).join(", ")
+    );
+  }
 
-    return res.status(200).json({
-        success: true,
-        message: "Projects fetched successfully",
-        data: resultData.projects,
-        pagination: resultData.pagination,
-    })
-}
+  const organizationId = req.params.organizationId as string;
 
-export const getProjectDetailsController = async (req: Request, res: Response) => {
-    const projectId = req.params.projectId as string;
+  const resultData = await projectServices.getOrganizationProjects(
+    organizationId,
+    result.data.page,
+    result.data.limit,
+    result.data.search,
+    result.data.includeArchived
+  );
 
-    const project = await projectServices.getProjectDetails(projectId);
+  return res.status(200).json({
+    success: true,
+    message: "Projects fetched successfully",
+    data: resultData.projects,
+    pagination: resultData.pagination,
+  });
+};
 
-    return res.status(200).json({
-        success: true,
-        message: "Project fetched successfully",
-        data: project
-    });
+// Get project details
+export const getProjectDetailsController = async ( req: Request, res: Response) => {
+    
+  const projectId = req.params.projectId as string;
+
+  const project = await projectServices.getProjectDetails(projectId);
+
+  return res.status(200).json({
+    success: true,
+    message: "Project fetched successfully",
+    data: project,
+  });
 };
