@@ -223,7 +223,7 @@ model Project {
   description String?
   avatar      String?
 
-  isArchieved Boolean @default(false)
+  isArchived Boolean @default(false)
 
   members ProjectMember[]
 
@@ -639,6 +639,8 @@ model PushSubscription {
 
   @@index([userId])
 }
+
+
 
 enum AuthProvider {
   EMAIL

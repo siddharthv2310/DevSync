@@ -4,13 +4,14 @@ import { organizationMiddleware } from "../../middlewares/organizationMiddleware
 import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "../manageOrganization/Organization/organizationPermission.js";
 import { createProjectController, getProjectDetailsController } from "./projectController.js";
-import { getOrganizationsController } from "../manageOrganization/Organization/organzationController.js";
+//import { getOrganizationsController } from "../manageOrganization/Organization/organzationController.js";
+import { getOrganizationProjectsController } from "./projectController.js";
 import { projectMiddleware } from "../../middlewares/projectMiddleware.js";
 
 const router = Router({mergeParams:true});
 
 router.post("/",authMiddleware , organizationMiddleware,requireOrganizationPermission(organizationPermission.CREATE_PROJECT),createProjectController);
-router.get("/",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.VIEW_PROJECT),getOrganizationsController);
+router.get("/",authMiddleware,organizationMiddleware,requireOrganizationPermission(organizationPermission.VIEW_PROJECT),getOrganizationProjectsController);
 router.get( "/:projectId",authMiddleware, organizationMiddleware,projectMiddleware,getProjectDetailsController);
 
 export default router;

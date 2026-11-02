@@ -7,7 +7,7 @@ export const createProjectController = async (req: Request, res: Response) => {
     const result = createProjectSchema.safeParse(req.body);
 
     if (!result.success) {
-        throw new ApiErrors(404, "invalid data process");
+        throw new ApiErrors(400, "invalid data process");
     }
 
     const organizationId = req.params.organizationId as string;
@@ -24,7 +24,7 @@ export const createProjectController = async (req: Request, res: Response) => {
 
 };
 
-export const getOrganizationProjectsController = async (res: Response, req: Request) => {
+export const getOrganizationProjectsController = async (req: Request , res: Response) => {
     const result = getProjectsQuerySchema.safeParse(req.query);
     if (!result.success) {
         throw new ApiErrors(400, "Invalid project query parameters");

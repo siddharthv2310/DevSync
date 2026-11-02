@@ -58,16 +58,16 @@ export const getOrganizationProjects = async (organizationId: string, page: numb
 
         ...(search
             ? {
-                or: [
+                OR: [
                     {
                         name: {
-                            contain: search,
+                            contains: search,
                             mode: "insensitive",
                         }
                     },
                     {
                         slug: {
-                            contain: search,
+                            contains: search,
                             mode: "insensitive",
                         }
                     }

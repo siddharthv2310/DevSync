@@ -14,7 +14,7 @@ export const teamRolePermissions: Record<TeamRole, teamPermission[] > = {
         teamPermission.REMOVE_MEMBERS,
         teamPermission.UPDATE_MEMBER_ROLE,
 
-        teamPermission. INVITE_MEMBERS,
+        teamPermission.INVITE_MEMBERS,
         teamPermission.VIEW_INVITATIONS,
         teamPermission.CANCEL_INVITATION,
 
@@ -32,7 +32,7 @@ export const teamRolePermissions: Record<TeamRole, teamPermission[] > = {
         teamPermission.REMOVE_MEMBERS,
         teamPermission.UPDATE_MEMBER_ROLE,
         
-        teamPermission. INVITE_MEMBERS,
+        teamPermission.INVITE_MEMBERS,
         teamPermission.VIEW_INVITATIONS,
         teamPermission.CANCEL_INVITATION,
 
