@@ -8,7 +8,8 @@ import prisma from "../config/prisma.js";
 export const projectMiddleware = async (req: Request,res: Response,next: NextFunction) => {
 
   try {
-    const organizationId = req.params.organization as string;
+
+    const organizationId = req.params.organizationId as string;
 
     const projectId  = req.params.projectId as string;
 
