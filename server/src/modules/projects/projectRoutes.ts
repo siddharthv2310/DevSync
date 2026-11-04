@@ -3,7 +3,7 @@ import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { organizationMiddleware } from "../../middlewares/organizationMiddleware.js";
 import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "../manageOrganization/Organization/organizationPermission.js";
-import { createProjectController, getProjectDetailsController, updateProjectController } from "./projectController.js";
+import { archiveProjectController, createProjectController, getProjectDetailsController, updateProjectController } from "./projectController.js";
 //import { getOrganizationsController } from "../manageOrganization/Organization/organzationController.js";
 import { getOrganizationProjectsController } from "./projectController.js";
 import { projectMiddleware } from "../../middlewares/projectMiddleware.js";
@@ -41,5 +41,13 @@ router.patch("/:projectId",
     requireProjectPermission(projectPermission.UPDATE_PROJECT),
     updateProjectController
   );
+
+router.patch( "/:projectId/archive",
+    authMiddleware,
+    organizationMiddleware,
+    projectMiddleware,
+    requireProjectPermission(projectPermission.ARCHIVE_PROJECT),
+    archiveProjectController
+  );  
 
 export default router;
