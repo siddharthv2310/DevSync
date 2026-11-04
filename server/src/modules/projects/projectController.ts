@@ -123,7 +123,7 @@ export const updateProjectController = async (req: Request,res: Response ) => {
 
 
 export const archiveProjectController = async ( req: Request, res: Response ) => {
-    
+
     const paramsResult = projectIdParamSchema.safeParse(req.params);
   
     if (!paramsResult.success) {
@@ -146,6 +146,36 @@ export const archiveProjectController = async ( req: Request, res: Response ) =>
     return res.status(200).json({
       success: true,
       message: "Project archived successfully",
+      data: project,
+    });
+  };
+  
+
+
+export const restoreProjectController = async ( req: Request, res: Response ) => {
+    
+    const paramsResult = projectIdParamSchema.safeParse(req.params);
+  
+    if (!paramsResult.success) {
+      throw new ApiErrors(
+        400,
+        paramsResult.error.issues
+          .map((issue) => issue.message)
+          .join(", ")
+      );
+    }
+  
+    const organizationId = req.params.organizationId as string;
+    const projectId = paramsResult.data.projectId;
+  
+    const project = await projectServices.restoreProject(
+      organizationId,
+      projectId
+    );
+  
+    return res.status(200).json({
+      success: true,
+      message: "Project restored successfully",
       data: project,
     });
   };

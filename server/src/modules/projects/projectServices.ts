@@ -307,3 +307,60 @@ export const archiveProject = async ( organizationId: string, projectId: string 
     }
   };
   
+
+
+export const restoreProject = async (organizationId: string,projectId: string ) => {
+    try {
+      const restoredProject = await prisma.project.update({
+        where: {
+          id: projectId,
+          organizationId,
+          isArchived: true,
+        },
+        data: {
+          isArchived: false,
+        },
+        select: {
+          id: true,
+          organizationId: true,
+          name: true,
+          slug: true,
+          description: true,
+          avatar: true,
+          isArchived: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+  
+      return restoredProject;
+    } 
+    catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        const existingProject = await prisma.project.findFirst({
+          where: {
+            id: projectId,
+            organizationId,
+          },
+          select: {
+            id: true,
+            isArchived: true,
+          },
+        });
+  
+        if (!existingProject) {
+          throw new ApiErrors(404, "Project not found");
+        }
+  
+        if (!existingProject.isArchived) {
+          throw new ApiErrors(409, "Project is already active");
+        }
+      }
+  
+      throw error;
+    }
+  };
+  

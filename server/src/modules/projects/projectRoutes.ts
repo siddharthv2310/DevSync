@@ -3,8 +3,7 @@ import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { organizationMiddleware } from "../../middlewares/organizationMiddleware.js";
 import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "../manageOrganization/Organization/organizationPermission.js";
-import { archiveProjectController, createProjectController, getProjectDetailsController, updateProjectController } from "./projectController.js";
-//import { getOrganizationsController } from "../manageOrganization/Organization/organzationController.js";
+import { archiveProjectController, createProjectController, getProjectDetailsController, restoreProjectController, updateProjectController } from "./projectController.js";
 import { getOrganizationProjectsController } from "./projectController.js";
 import { projectMiddleware } from "../../middlewares/projectMiddleware.js";
 import { requireProjectPermission } from "../../middlewares/projectPermissionMiddleware.js";
@@ -49,5 +48,16 @@ router.patch( "/:projectId/archive",
     requireProjectPermission(projectPermission.ARCHIVE_PROJECT),
     archiveProjectController
   );  
+
+
+// Restore archived project
+router.patch("/:projectId/restore",
+    authMiddleware,
+    organizationMiddleware,
+    projectMiddleware,
+    requireProjectPermission(projectPermission.RESTORE_PROJECT),
+    restoreProjectController
+  );
+
 
 export default router;
