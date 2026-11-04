@@ -1,7 +1,7 @@
 
 import { Request, Response } from "express";
 import * as projectServices from "./projectServices.js";
-import {createProjectSchema,getProjectsQuerySchema,} from "./projectValidator.js";
+import {createProjectSchema,getProjectsQuerySchema, projectIdParamSchema, updateProjectSchema,} from "./projectValidator.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
 // Create project
@@ -64,7 +64,7 @@ export const getOrganizationProjectsController = async (req: Request,res: Respon
 
 // Get project details
 export const getProjectDetailsController = async ( req: Request, res: Response) => {
-    
+
   const projectId = req.params.projectId as string;
 
   const project = await projectServices.getProjectDetails(projectId);
@@ -75,3 +75,48 @@ export const getProjectDetailsController = async ( req: Request, res: Response) 
     data: project,
   });
 };
+
+
+
+export const updateProjectController = async (req: Request,res: Response ) => {
+    
+    // Validate project ID
+    const paramsResult = projectIdParamSchema.safeParse(req.params);
+  
+    if (!paramsResult.success) {
+      throw new ApiErrors(
+        400,
+        paramsResult.error.issues
+          .map((issue) => issue.message)
+          .join(", ")
+      );
+    }
+  
+    // Validate request body
+    const bodyResult = updateProjectSchema.safeParse(req.body);
+  
+    if (!bodyResult.success) {
+      throw new ApiErrors(
+        400,
+        bodyResult.error.issues
+          .map((issue) => issue.message)
+          .join(", ")
+      );
+    }
+  
+    const organizationId = req.params.organizationId as string;
+    const projectId = paramsResult.data.projectId;
+  
+    const project = await projectServices.updateProject(
+      organizationId,
+      projectId,
+      bodyResult.data
+    );
+  
+    return res.status(200).json({
+      success: true,
+      message: "Project updated successfully",
+      data: project,
+    });
+  };
+  

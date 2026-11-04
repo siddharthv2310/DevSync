@@ -1,7 +1,7 @@
 
 import { Prisma, projectRole } from "@prisma/client";
 import prisma from "../../config/prisma.js";
-import { CreateProjectInput } from "./projectValidator.js";
+import { CreateProjectInput, UpdateProjectInput } from "./projectValidator.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
 
 // Create project
@@ -125,7 +125,7 @@ export const getOrganizationProjects = async ( organizationId: string, page: num
 
 // Get project details
 export const getProjectDetails = async (projectId: string) => {
-    
+
   const project = await prisma.project.findUnique({
     where: {
       id: projectId,
@@ -158,3 +158,92 @@ export const getProjectDetails = async (projectId: string) => {
     _count: undefined,
   };
 };
+
+
+export const updateProject = async (organizationId: string,projectId: string,updateData: UpdateProjectInput) => {
+
+    try {
+      // Build update data using only fields provided by the client.
+      const data: Prisma.ProjectUpdateInput = {
+        ...(updateData.name !== undefined && {
+          name: updateData.name,
+        }),
+  
+        ...(updateData.slug !== undefined && {
+          slug: updateData.slug,
+        }),
+  
+        ...(updateData.description !== undefined && {
+          description: updateData.description,
+        }),
+  
+        ...(updateData.avatar !== undefined && {
+          avatar: updateData.avatar,
+        }),
+      };
+  
+      const updatedProject = await prisma.project.update({
+        where: {
+          id: projectId,
+          organizationId,
+          isArchived: false,
+        },
+        data,
+        select: {
+          id: true,
+          organizationId: true,
+          name: true,
+          slug: true,
+          description: true,
+          avatar: true,
+          isArchived: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+  
+      return updatedProject;
+  
+    } 
+    catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError
+      ) {
+        // Duplicate slug
+        if (error.code === "P2002") {
+          throw new ApiErrors(
+            409,
+            "A project with this slug already exists in this organization"
+          );
+        }
+  
+        // Project not found, belongs to another organization,
+        // or is archived.
+        if (error.code === "P2025") {
+          const existingProject = await prisma.project.findFirst({
+            where: {
+              id: projectId,
+              organizationId,
+            },
+            select: {
+              id: true,
+              isArchived: true,
+            },
+          });
+  
+          if (!existingProject) {
+            throw new ApiErrors(404, "Project not found");
+          }
+  
+          if (existingProject.isArchived) {
+            throw new ApiErrors(
+              403,
+              "Archived projects cannot be updated. Restore the project first."
+            );
+          }
+        }
+      }
+  
+      throw error;
+    }
+  };
