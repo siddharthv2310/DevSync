@@ -40,5 +40,5 @@ router.use("/chat-thread", threadRoute);
 router.use("/chat-reaction",reactionRoute);
 router.use("/conversations/:conversationId",attachmentRoute);
 router.use("/notifications",notificationRoute);
-router.use("/organizations/:organizationId",projectMemberRoute);
+router.use("/organizations/:organizationId/projects",projectMemberRoute);
 export default router;
