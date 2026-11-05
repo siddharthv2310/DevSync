@@ -6,6 +6,7 @@ import joinRequestRoute from "../../modules/manageOrganization/joinRequest/index
 import organizationSettingRoute from "../../modules/manageOrganization/organizationSettings/index.js"
 import organizationDiscoveryRoute from "../../modules/manageOrganization/organizationDiscovery/index.js"
 import projectRoute from "../../modules/projects/index.js";
+import projectMemberRoute from "../../modules/projects/members/index.js"
 import teamRoute from "../../modules/Team/index.js"
 import teamDashboardRoute from "../../modules/Team/Dashboard/index.js";
 import teamInvitationRoute from "../../modules/Team/teamInvitationRequest/index.js";
@@ -16,6 +17,7 @@ import threadRoute from "../../modules/chat/threads/index.js"
 import reactionRoute from "../../modules/chat/reaction/index.js"
 import attachmentRoute from "../../modules/chat/attachment/index.js"
 import notificationRoute from "../../modules/Notification/index.js"
+
 
 
 const router = Router(); 
@@ -38,5 +40,5 @@ router.use("/chat-thread", threadRoute);
 router.use("/chat-reaction",reactionRoute);
 router.use("/conversations/:conversationId",attachmentRoute);
 router.use("/notifications",notificationRoute);
-
+router.use("/organizations/:organizationId",projectMemberRoute);
 export default router;
