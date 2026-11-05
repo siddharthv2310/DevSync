@@ -3,7 +3,7 @@ import { authMiddleware } from "../../middlewares/authMiddleware.js";
 import { organizationMiddleware } from "../../middlewares/organizationMiddleware.js";
 import { requireOrganizationPermission } from "../../middlewares/permissionMiddleware.js";
 import { organizationPermission } from "../manageOrganization/Organization/organizationPermission.js";
-import { archiveProjectController, createProjectController, getProjectDetailsController, restoreProjectController, updateProjectController } from "./projectController.js";
+import { archiveProjectController, createProjectController, deleteProjectController, getProjectDetailsController, restoreProjectController, updateProjectController } from "./projectController.js";
 import { getOrganizationProjectsController } from "./projectController.js";
 import { projectMiddleware } from "../../middlewares/projectMiddleware.js";
 import { requireProjectPermission } from "../../middlewares/projectPermissionMiddleware.js";
@@ -59,5 +59,14 @@ router.patch("/:projectId/restore",
     restoreProjectController
   );
 
+
+router.delete( "/:projectId",
+    authMiddleware,
+    organizationMiddleware,
+    requireOrganizationPermission( organizationPermission.DELETE_PROJECT),
+    projectMiddleware,
+    deleteProjectController
+  );
+  
 
 export default router;

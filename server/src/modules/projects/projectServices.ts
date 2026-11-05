@@ -1,5 +1,5 @@
 
-import { Prisma, projectRole } from "@prisma/client";
+import { OrganizationRole, Prisma, projectRole } from "@prisma/client";
 import prisma from "../../config/prisma.js";
 import { CreateProjectInput, UpdateProjectInput } from "./projectValidator.js";
 import { ApiErrors } from "../../common/errors/ApiErrors.js";
@@ -360,6 +360,151 @@ export const restoreProject = async (organizationId: string,projectId: string ) 
         }
       }
   
+      throw error;
+    }
+  };
+  
+  
+  // Permanently delete an archived project
+  export const deleteProject = async ( organizationId: string, projectId: string, userId: string ) => {
+
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          // 1. Verify organization OWNER permission.
+          const organizationMember = await tx.organizationMember.findUnique({
+              where: {
+                organizationId_userId: {
+                  organizationId,
+                  userId,
+                },
+              },
+              select: {
+                role: true,
+              },
+            });
+  
+          if (!organizationMember) {
+            throw new ApiErrors(
+              403,
+              "Organization membership required"
+            );
+          }
+  
+          if (
+            organizationMember.role !== OrganizationRole.OWNER
+          ) {
+            throw new ApiErrors(
+              403,
+              "Only the organization OWNER can permanently delete a project"
+            );
+          }
+  
+          // 2. Find the project and its conversation IDs.
+          const project = await tx.project.findFirst({
+            where: {
+              id: projectId,
+              organizationId,
+            },
+            select: {
+              id: true,
+              name: true,
+              isArchived: true,
+              conversations: {
+                select: {
+                  id: true,
+                },
+              },
+            },
+          });
+  
+          if (!project) {
+            throw new ApiErrors(404, "Project not found");
+          }
+  
+          // 3. Require archival before permanent deletion.
+          if (!project.isArchived) {
+            throw new ApiErrors(
+              409,
+              "Archive the project before permanently deleting it"
+            );
+          }
+  
+          const conversationIds = project.conversations.map(
+              (conversation) => conversation.id
+            );
+  
+          if (conversationIds.length > 0) {
+            // 4. Collect S3 keys from existing message attachments.
+            const messageAttachments = await tx.messageAttachment.findMany({
+                where: {
+                  message: {
+                    conversationId: {
+                      in: conversationIds,
+                    },
+                  },
+                },
+                select: {
+                  storageKey: true,
+                },
+              });
+  
+            // 5. Collect S3 keys from pending/completed uploads too.
+            const attachmentUploads = await tx.attachmentUpload.findMany({
+                where: {
+                  conversationId: {
+                    in: conversationIds,
+                  },
+                },
+                select: {
+                  storageKey: true,
+                },
+              });
+  
+            const storageKeys = [
+              ...new Set([
+                ...messageAttachments.map(
+                  (attachment) => attachment.storageKey
+                ),
+                ...attachmentUploads.map(
+                  (upload) => upload.storageKey
+                ),
+              ]),
+            ];
+  
+            // 6. Persist cleanup jobs before deleting the project.
+            if (storageKeys.length > 0) {
+              await tx.storageDeletionJob.createMany({
+                data: storageKeys.map((storageKey) => ({
+                  storageKey,
+                })),
+                skipDuplicates: true,
+              });
+            }
+          }
+  
+          // 7. Permanently delete the project.
+          // Related project members and conversations are
+          // removed through Prisma/database cascade relations.
+          await tx.project.delete({
+            where: {
+              id: projectId,
+            },
+          });
+  
+          return {
+            id: project.id,
+            name: project.name,
+            deleted: true,
+          };
+        },
+        {
+          maxWait: 5000,
+          timeout: 15000,
+        }
+      );
+    } 
+    catch (error) {
       throw error;
     }
   };

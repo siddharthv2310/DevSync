@@ -640,7 +640,23 @@ model PushSubscription {
   @@index([userId])
 }
 
+model StorageDeletionJob {
+  id String @id @default(uuid())
 
+  storageKey String @unique
+
+  status StorageDeletionStatus @default(PENDING)
+
+  attempts      Int       @default(0)
+  lastError     String?
+  nextAttemptAt DateTime  @default(now())
+  processedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
 
 enum AuthProvider {
   EMAIL
@@ -733,4 +749,11 @@ enum NotificationType {
   FILE_UPLOADED
   JOIN_REQUEST_APPROVED
   JOIN_REQUEST_REJECTED
+}
+
+enum StorageDeletionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
