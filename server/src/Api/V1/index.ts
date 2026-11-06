@@ -18,7 +18,7 @@ import threadRoute from "../../modules/chat/threads/index.js"
 import reactionRoute from "../../modules/chat/reaction/index.js"
 import attachmentRoute from "../../modules/chat/attachment/index.js"
 import notificationRoute from "../../modules/Notification/index.js"
-
+import userRoute from "../../modules/user/invitations/index.js"
 
 
 const router = Router(); 
@@ -43,6 +43,6 @@ router.use("/notifications",notificationRoute);
 router.use("/organizations/:organizationId/projects",projectRoute);
 router.use("/organizations/:organizationId/projects",projectMemberRoute);
 router.use("/organizations/:organizationId/projects",projectInvitationRoute)
-
+router.use("/user",userRoute);
 
 export default router;

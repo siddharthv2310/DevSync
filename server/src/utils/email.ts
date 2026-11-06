@@ -414,14 +414,6 @@ export const sendProjectInvitationEmail = async (
   token: string
 ) => {
 
-  console.log("========== PROJECT EMAIL DEBUG ==========");
-  console.log("Email function called");
-  console.log("Passed email:", email);
-  console.log("TO_EMAIL:", process.env.TO_EMAIL);
-  console.log("Project:", projectName);
-  console.log("Organization:", organizationName);
-  console.log("Frontend URL:", process.env.FRONTEND_URL);
-
   const frontendUrl = process.env.FRONTEND_URL;
 
   console.log("Sending email through Resend...");

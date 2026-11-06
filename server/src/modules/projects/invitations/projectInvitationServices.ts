@@ -292,3 +292,4 @@ export const getProjectInvitations = async (projectId: string, query: GetProject
         },
     };
 };
+
