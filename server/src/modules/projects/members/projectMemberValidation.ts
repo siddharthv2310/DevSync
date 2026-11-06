@@ -21,6 +21,11 @@ export const addProjectMemberSchema = z.object({
         .default("MEMBER"),
 });
 
+export const removeProjectMemberSchema = z.object({
+    projectId:z.string().uuid("Invalid project ID"),
+    userId:z.string().uuid("invalid user ID"),
+})
+
 export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;
 
 export type GetProjectMembersQuery = z.infer<typeof getProjectMembersQuerySchema>;

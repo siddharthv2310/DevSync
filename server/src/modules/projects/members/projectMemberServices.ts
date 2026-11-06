@@ -198,3 +198,137 @@ export const addProjectMember = async (organizationId: string, projectId: string
         throw error;
     }
 };
+
+
+export const removeProjectMember = async ( organizationId: string, projectId: string, targetUserId: string, requesterUserId: string) => {
+    
+    return await prisma.$transaction(async (tx) => {
+  
+      // 1. Prevent self-removal
+      if (targetUserId === requesterUserId) {
+        throw new ApiErrors(
+          400,
+          "You cannot remove yourself using this endpoint"
+        );
+      }
+  
+      // 2. Verify project and organization
+      const project = await tx.project.findFirst({
+        where: {
+          id: projectId,
+          organizationId,
+        },
+        select: {
+          id: true,
+          isArchived: true,
+        },
+      });
+  
+      if (!project) {
+        throw new ApiErrors(404, "Project not found");
+      }
+  
+      if (project.isArchived) {
+        throw new ApiErrors(
+          409,
+          "Cannot remove members from an archived project"
+        );
+      }
+  
+      // 3. Find the requester's project membership
+      const requesterMembership = await tx.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId: requesterUserId,
+          },
+        },
+        select: {
+          role: true,
+        },
+      });
+  
+      if (!requesterMembership) {
+        throw new ApiErrors(
+          403,
+          "You must be a project member to remove members"
+        );
+      }
+  
+      // 4. Only OWNER and ADMIN can remove members
+      if (
+        requesterMembership.role !== projectRole.OWNER &&
+        requesterMembership.role !== projectRole.ADMIN
+      ) {
+        throw new ApiErrors(
+          403,
+          "You do not have permission to remove project members"
+        );
+      }
+  
+      // 5. Find the target membership
+      const targetMembership = await tx.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId: targetUserId,
+          },
+        },
+        select: {
+          id: true,
+          role: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+  
+      if (!targetMembership) {
+        throw new ApiErrors(
+          404,
+          "User is not a member of this project"
+        );
+      }
+  
+      // 6. Project OWNER can never be removed directly
+      if (targetMembership.role === projectRole.OWNER) {
+        throw new ApiErrors(
+          403,
+          "Project ownership must be transferred before removing the owner"
+        );
+      }
+  
+      // 7. ADMIN cannot remove another ADMIN
+      if (
+        requesterMembership.role === projectRole.ADMIN &&
+        targetMembership.role === projectRole.ADMIN
+      ) {
+        throw new ApiErrors(
+          403,
+          "Project ADMIN cannot remove another ADMIN"
+        );
+      }
+  
+      // 8. Delete the target membership
+      await tx.projectMember.delete({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId: targetUserId,
+          },
+        },
+      });
+  
+      return {
+        projectId,
+        removedMember: targetMembership.user,
+        removedRole: targetMembership.role,
+        removedBy: requesterUserId,
+        removed: true,
+      };
+    });
+  };

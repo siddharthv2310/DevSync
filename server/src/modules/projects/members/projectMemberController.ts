@@ -4,7 +4,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 import * as projectMemberServices from "./projectMemberServices.js";
 
-import { getProjectMembersSchema, getProjectMembersQuerySchema, addProjectMemberSchema, } from "./projectMemberValidation.js";
+import { getProjectMembersSchema, getProjectMembersQuerySchema, addProjectMemberSchema, removeProjectMemberSchema, } from "./projectMemberValidation.js";
 
 export const getProjectMembersController = async (req: Request, res: Response) => {
 
@@ -89,3 +89,38 @@ export const addProjectMemberController = async (req: Request, res: Response) =>
         data: newMember,
     });
 };
+
+
+
+export const removeProjectMemberController = async (req: Request,res: Response ) => {
+
+    // Validate URL parameters
+    const paramsResult = removeProjectMemberSchema.safeParse(req.params);
+  
+    if (!paramsResult.success) {
+      throw new ApiErrors(
+        400,
+        paramsResult.error.issues
+          .map((issue) => issue.message)
+          .join(", ")
+      );
+    }
+  
+    const organizationId = req.params.organizationId as string;
+    const projectId = paramsResult.data.projectId;
+    const targetUserId = paramsResult.data.userId;
+    const requesterUserId = req.user!.userId;
+  
+    const result = await projectMemberServices.removeProjectMember(
+      organizationId,
+      projectId,
+      targetUserId,
+      requesterUserId
+    );
+  
+    return res.status(200).json({
+      success: true,
+      message: "Project member removed successfully",
+      data: result,
+    });
+  };
