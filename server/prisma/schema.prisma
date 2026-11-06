@@ -74,7 +74,10 @@ model User {
   joinRequests        OrganizationJoinRequest[]
   reviewedJoinRequest OrganizationJoinRequest[] @relation("JoinRequestReviewer")
 
-  projectMemberships      ProjectMember[]
+  projectMemberships         ProjectMember[]
+  sentProjectInvitations     ProjectInvitation[] @relation("ProjectInvitationsSent")
+  receivedProjectInvitations ProjectInvitation[] @relation("ProjectInvitationsReceived")
+
   oauthAccounts           OAuthAccount[]
   teamMemberships         TeamMember[]
   teamJoinRequests        TeamJoinRequest[]
@@ -225,9 +228,9 @@ model Project {
 
   isArchived Boolean @default(false)
 
-  members ProjectMember[]
-
+  members       ProjectMember[]
   conversations Conversation[]
+  invitations   ProjectInvitation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -255,6 +258,39 @@ model ProjectMember {
   @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
+}
+
+model ProjectInvitation {
+  id String @id @default(uuid())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  invitedUserId String
+  invitedUser   User   @relation("ProjectInvitationsReceived", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  invitedById String
+  invitedBy   User   @relation("ProjectInvitationsSent", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  role projectRole @default(MEMBER)
+
+  tokenHash String @unique
+
+  status ProjectInvitationStatus @default(PENDING)
+
+  message String?
+
+  expiresAt DateTime
+
+  respondedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, invitedUserId])
+  @@index([projectId, status])
+  @@index([invitedUserId, status])
+  @@index([expiresAt])
 }
 
 model Team {
@@ -694,6 +730,14 @@ enum projectRole {
   ADMIN
   MEMBER
   VIEWER
+}
+
+enum ProjectInvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  EXPIRED
 }
 
 enum TeamRole {
