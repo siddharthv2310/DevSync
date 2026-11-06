@@ -7,6 +7,7 @@ import organizationSettingRoute from "../../modules/manageOrganization/organizat
 import organizationDiscoveryRoute from "../../modules/manageOrganization/organizationDiscovery/index.js"
 import projectRoute from "../../modules/projects/index.js";
 import projectMemberRoute from "../../modules/projects/members/index.js"
+import projectInvitationRoute from "../../modules/projects/invitations/index.js"
 import teamRoute from "../../modules/Team/index.js"
 import teamDashboardRoute from "../../modules/Team/Dashboard/index.js";
 import teamInvitationRoute from "../../modules/Team/teamInvitationRequest/index.js";
@@ -41,4 +42,7 @@ router.use("/chat-reaction",reactionRoute);
 router.use("/conversations/:conversationId",attachmentRoute);
 router.use("/notifications",notificationRoute);
 router.use("/organizations/:organizationId/projects",projectMemberRoute);
+router.use("/organizations/:organizationId/projects",projectInvitationRoute)
+
+
 export default router;
