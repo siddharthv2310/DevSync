@@ -8,11 +8,11 @@ import { requireProjectPermission } from "../../../middlewares/projectPermission
 
 import { projectPermission, } from "../projectPermissions.js";
 
-import { createProjectInvitationController, getProjectInvitationsController, } from "./projectInvitationController.js";
+import { acceptProjectInvitationController, createProjectInvitationController, getProjectInvitationsController, } from "./projectInvitationController.js";
 
 const router = Router({ mergeParams: true });
 
-router.post("/:projectId/invitations",
+router.post("/",
     authMiddleware,
     organizationMiddleware,
     projectMiddleware,
@@ -20,14 +20,18 @@ router.post("/:projectId/invitations",
     createProjectInvitationController
 );
 
-router.get("/:projectId/invitations",
+router.get("/",
     authMiddleware,
     organizationMiddleware,
     projectMiddleware,
     requireProjectPermission(projectPermission.VIEW_INVITATIONS),
     getProjectInvitationsController
 );
+  
 
-
+router.post( "/accept",
+    authMiddleware,
+    acceptProjectInvitationController
+  );
 
 export default router;

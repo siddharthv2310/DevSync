@@ -3,11 +3,12 @@ import { NextFunction, Request, Response } from "express";
 import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 import * as projectInvitationServices from "./projectInvitationServices.js";
 
-import {CreateProjectInvitationInput, createProjectInvitationSchema, getProjectInvitationsQuerySchema, } from "./projectInvitationValidation.js";
-import { CreateInvitationInput } from "../../manageOrganization/invitation/invitationValidation.js";
-import { getProjectMembersSchema } from "../members/projectMemberValidation.js";
-import { ProjectInvitationStatus } from "@prisma/client";
+import {acceptProjectInvitationSchema, CreateProjectInvitationInput, createProjectInvitationSchema, getProjectInvitationsQuerySchema, } from "./projectInvitationValidation.js";
 
+import { getProjectMembersSchema } from "../members/projectMemberValidation.js";
+import { acceptProjectInvitation } from "./projectInvitationServices.js";
+import { ProjectInvitationStatus } from "@prisma/client";
+import { getMyProjectInvitations } from "../../user/invitations/userInvitationServices.js";
 
 export const createProjectInvitationController = async (req: Request,res: Response ) => {
   const bodyResult = createProjectInvitationSchema.safeParse(req.body);
@@ -75,4 +76,24 @@ export const getProjectInvitationsController = async (req: Request,res: Response
   };
 
 
+
+export const acceptProjectInvitationController = async (req: Request,res: Response,next: NextFunction) => {
+    
+  try {
+    const { token } = acceptProjectInvitationSchema.parse(req.body);
+
+    const userId = req.user?.userId as string;
+
+    const result = await acceptProjectInvitation(userId, token);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      membership: result.membership,
+    });
+  } 
   
+  catch (error) {
+    next(error);
+  }
+};

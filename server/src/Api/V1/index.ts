@@ -42,7 +42,7 @@ router.use("/conversations/:conversationId",attachmentRoute);
 router.use("/notifications",notificationRoute);
 router.use("/organizations/:organizationId/projects",projectRoute);
 router.use("/organizations/:organizationId/projects",projectMemberRoute);
-router.use("/organizations/:organizationId/projects",projectInvitationRoute)
+router.use("/organizations/:organizationId/projects/:projectId/invitations",projectInvitationRoute)
 router.use("/user",userRoute);
 
 export default router;
