@@ -78,7 +78,7 @@ export const getProjectInvitationsController = async (req: Request,res: Response
 
 
 export const acceptProjectInvitationController = async (req: Request,res: Response,next: NextFunction) => {
-    
+
   try {
     const { token } = acceptProjectInvitationSchema.parse(req.body);
 
@@ -93,6 +93,28 @@ export const acceptProjectInvitationController = async (req: Request,res: Respon
     });
   } 
   
+  catch (error) {
+    next(error);
+  }
+};
+
+import { rejectProjectInvitation } from "./projectInvitationServices.js";
+import { rejectProjectInvitationSchema } from "./projectInvitationValidation.js";
+
+export const rejectProjectInvitationController = async (req: Request,res: Response,next: NextFunction ) => {
+
+  try {
+    const { token } = rejectProjectInvitationSchema.parse(req.body);
+
+    const userId = req.user?.userId as string;
+
+    const result = await rejectProjectInvitation(userId, token);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } 
   catch (error) {
     next(error);
   }

@@ -8,7 +8,7 @@ import { requireProjectPermission } from "../../../middlewares/projectPermission
 
 import { projectPermission, } from "../projectPermissions.js";
 
-import { acceptProjectInvitationController, createProjectInvitationController, getProjectInvitationsController, } from "./projectInvitationController.js";
+import { acceptProjectInvitationController, createProjectInvitationController, getProjectInvitationsController, rejectProjectInvitationController, } from "./projectInvitationController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -27,11 +27,16 @@ router.get("/",
     requireProjectPermission(projectPermission.VIEW_INVITATIONS),
     getProjectInvitationsController
 );
-  
 
-router.post( "/accept",
+
+router.post("/accept",
     authMiddleware,
     acceptProjectInvitationController
-  );
+);
+
+router.post("/reject",
+    authMiddleware,
+    rejectProjectInvitationController
+);
 
 export default router;

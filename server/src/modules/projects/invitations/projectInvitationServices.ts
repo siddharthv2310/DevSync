@@ -455,3 +455,80 @@ export const acceptProjectInvitation = async (userId: string,token: string) => {
     throw error;
   }
 };
+
+export const rejectProjectInvitation = async (userId: string,token: string ) => {
+    
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+  
+    // 1. Find invitation
+    const invitation = await prisma.projectInvitation.findUnique({
+      where: {
+        tokenHash,
+      },
+    });
+  
+    if (!invitation) {
+      throw new ApiErrors(404, "Invalid invitation");
+    }
+  
+    // 2. Verify recipient
+    if (invitation.invitedUserId !== userId) {
+      throw new ApiErrors(
+        403,
+        "You are not authorized to reject this invitation"
+      );
+    }
+  
+    // 3. Verify invitation status
+    if (invitation.status !== ProjectInvitationStatus.PENDING) {
+      throw new ApiErrors(
+        400,
+        "This invitation is no longer available"
+      );
+    }
+  
+    // 4. Check expiry
+    if (invitation.expiresAt <= new Date()) {
+      await prisma.projectInvitation.updateMany({
+        where: {
+          id: invitation.id,
+          status: ProjectInvitationStatus.PENDING,
+        },
+        data: {
+          status: ProjectInvitationStatus.EXPIRED,
+        },
+      });
+  
+      throw new ApiErrors(400, "This invitation has expired");
+    }
+  
+    // 5. Reject invitation
+    const updatedInvitation = await prisma.projectInvitation.updateMany({
+      where: {
+        id: invitation.id,
+        invitedUserId: userId,
+        status: ProjectInvitationStatus.PENDING,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      data: {
+        status: ProjectInvitationStatus.REJECTED,
+        respondedAt: new Date(),
+      },
+    });
+  
+    if (updatedInvitation.count !== 1) {
+      throw new ApiErrors(
+        409,
+        "Invitation is no longer available or has expired"
+      );
+    }
+  
+    return {
+      message: "Project invitation rejected successfully",
+    };
+  };
