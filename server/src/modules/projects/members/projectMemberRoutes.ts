@@ -7,7 +7,7 @@ import { requireProjectPermission } from "../../../middlewares/projectPermission
 
 import { projectPermission } from "../projectPermissions.js";
 
-import { addProjectMemberController, getProjectMembersController, leaveProjectController, removeProjectMemberController } from "./projectMemberController.js";
+import { addProjectMemberController, getProjectMembersController, leaveProjectController, removeProjectMemberController, updateProjectMemberRoleController } from "./projectMemberController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -42,5 +42,14 @@ router.post("/:projectId/members/leave",
     projectMiddleware,
     leaveProjectController
 );
+
+
+router.patch( "/:projectId/members/:userId/role",
+    authMiddleware,
+    organizationMiddleware,
+    projectMiddleware,
+    requireProjectPermission(projectPermission.UPDATE_MEMBER_ROLE),
+    updateProjectMemberRoleController
+  );
 
 export default router;

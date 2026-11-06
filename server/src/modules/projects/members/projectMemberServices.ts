@@ -335,7 +335,7 @@ export const removeProjectMember = async ( organizationId: string, projectId: st
 
 
   export const leaveProject = async (organizationId: string,projectId: string,userId: string ) => {
-    
+
     return await prisma.$transaction(async (tx) => {
   
       // 1. Verify project
@@ -406,5 +406,170 @@ export const removeProjectMember = async ( organizationId: string, projectId: st
         role: membership.role,
         left: true,
       };
+    });
+  };
+
+
+  export const updateProjectMemberRole = async (organizationId: string,projectId: string,targetUserId: string,requesterUserId: string,newRole: projectRole ) => {
+    
+    return await prisma.$transaction(async (tx) => {
+  
+      // 1. Prevent users from changing their own role
+      if (targetUserId === requesterUserId) {
+        throw new ApiErrors(
+          400,
+          "You cannot update your own role"
+        );
+      }
+  
+      // 2. Verify project exists and is not archived
+      const project = await tx.project.findFirst({
+        where: {
+          id: projectId,
+          organizationId,
+        },
+        select: {
+          id: true,
+          isArchived: true,
+        },
+      });
+  
+      if (!project) {
+        throw new ApiErrors(404, "Project not found");
+      }
+  
+      if (project.isArchived) {
+        throw new ApiErrors(
+          409,
+          "Cannot update member roles in an archived project"
+        );
+      }
+  
+      // 3. Get requester's project membership
+      const requesterMembership = await tx.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId: requesterUserId,
+          },
+        },
+        select: {
+          role: true,
+        },
+      });
+  
+      if (!requesterMembership) {
+        throw new ApiErrors(
+          403,
+          "You must be a project member to update member roles"
+        );
+      }
+  
+      const requesterRole = requesterMembership.role;
+  
+      // 4. Only OWNER and ADMIN can update roles
+      if (
+        requesterRole !== projectRole.OWNER &&
+        requesterRole !== projectRole.ADMIN
+      ) {
+        throw new ApiErrors(
+          403,
+          "You do not have permission to update member roles"
+        );
+      }
+  
+      // 5. Find target member
+      const targetMembership = await tx.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId: targetUserId,
+          },
+        },
+        select: {
+          id: true,
+          role: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+  
+      if (!targetMembership) {
+        throw new ApiErrors(
+          404,
+          "User is not a member of this project"
+        );
+      }
+  
+      // 6. Prevent changing OWNER role
+      if (targetMembership.role === projectRole.OWNER) {
+        throw new ApiErrors(
+          403,
+          "Project owner's role cannot be changed"
+        );
+      }
+  
+      // 7. Prevent ADMIN from modifying another ADMIN
+      if (
+        requesterRole === projectRole.ADMIN &&
+        targetMembership.role === projectRole.ADMIN
+      ) {
+        throw new ApiErrors(
+          403,
+          "Project ADMIN cannot modify another ADMIN"
+        );
+      }
+  
+      // 8. Only OWNER can assign ADMIN role
+      if (
+        requesterRole === projectRole.ADMIN &&
+        newRole === projectRole.ADMIN
+      ) {
+        throw new ApiErrors(
+          403,
+          "Only the project OWNER can assign ADMIN role"
+        );
+      }
+  
+      // 9. Prevent unnecessary updates
+      if (targetMembership.role === newRole) {
+        throw new ApiErrors(
+          400,
+          "User already has this role"
+        );
+      }
+  
+      // 10. Update member role
+      const updatedMembership = await tx.projectMember.update({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId: targetUserId,
+          },
+        },
+        data: {
+          role: newRole,
+        },
+        select: {
+          projectId: true,
+          role: true,
+          joinedAt: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+  
+      return updatedMembership;
     });
   };

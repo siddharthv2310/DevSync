@@ -21,10 +21,28 @@ export const addProjectMemberSchema = z.object({
         .default("MEMBER"),
 });
 
+
 export const removeProjectMemberSchema = z.object({
-    projectId:z.string().uuid("Invalid project ID"),
-    userId:z.string().uuid("invalid user ID"),
+    projectId: z.string().uuid("Invalid project ID"),
+    userId: z.string().uuid("invalid user ID"),
 })
+
+
+export const updateProjectMemberRoleSchema = z.object({
+    userId: z.string().uuid("Invalid user ID"),
+
+});
+
+
+export const updateProjectMemberRoleBodySchema = z.object({
+    role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
+  });
+
+
+
+export type UpdateProjectMemberRoleInput = z.infer<typeof updateProjectMemberRoleSchema>;
+
+export type removeProjectMemberInput = z.infer<typeof removeProjectMemberSchema>;
 
 export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;
 
