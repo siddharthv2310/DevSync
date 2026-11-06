@@ -201,7 +201,7 @@ export const addProjectMember = async (organizationId: string, projectId: string
 
 
 export const removeProjectMember = async ( organizationId: string, projectId: string, targetUserId: string, requesterUserId: string) => {
-    
+
     return await prisma.$transaction(async (tx) => {
   
       // 1. Prevent self-removal
@@ -329,6 +329,82 @@ export const removeProjectMember = async ( organizationId: string, projectId: st
         removedRole: targetMembership.role,
         removedBy: requesterUserId,
         removed: true,
+      };
+    });
+  };
+
+
+  export const leaveProject = async (organizationId: string,projectId: string,userId: string ) => {
+    
+    return await prisma.$transaction(async (tx) => {
+  
+      // 1. Verify project
+      const project = await tx.project.findFirst({
+        where: {
+          id: projectId,
+          organizationId,
+        },
+        select: {
+          id: true,
+          isArchived: true,
+        },
+      });
+  
+      if (!project) {
+        throw new ApiErrors(404, "Project not found");
+      }
+  
+      if (project.isArchived) {
+        throw new ApiErrors(
+          409,
+          "Cannot leave an archived project"
+        );
+      }
+  
+      // 2. Find current user's membership
+      const membership = await tx.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId,
+          },
+        },
+        select: {
+          id: true,
+          role: true,
+        },
+      });
+  
+      if (!membership) {
+        throw new ApiErrors(
+          404,
+          "You are not a member of this project"
+        );
+      }
+  
+      // 3. Protect project ownership
+      if (membership.role === projectRole.OWNER) {
+        throw new ApiErrors(
+          403,
+          "Transfer project ownership before leaving the project"
+        );
+      }
+  
+      // 4. Delete only the current user's membership
+      await tx.projectMember.delete({
+        where: {
+          projectId_userId: {
+            projectId,
+            userId,
+          },
+        },
+      });
+  
+      return {
+        projectId,
+        userId,
+        role: membership.role,
+        left: true,
       };
     });
   };

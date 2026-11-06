@@ -7,7 +7,7 @@ import { requireProjectPermission } from "../../../middlewares/projectPermission
 
 import { projectPermission } from "../projectPermissions.js";
 
-import { addProjectMemberController, getProjectMembersController, removeProjectMemberController } from "./projectMemberController.js";
+import { addProjectMemberController, getProjectMembersController, leaveProjectController, removeProjectMemberController } from "./projectMemberController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -28,12 +28,19 @@ router.post("/:projectId/members",
     addProjectMemberController
 );
 
-router.delete( "/:projectId/members/:userId",
+router.delete("/:projectId/members/:userId",
     authMiddleware,
     organizationMiddleware,
     projectMiddleware,
     requireProjectPermission(projectPermission.REMOVE_MEMBERS),
     removeProjectMemberController
-  );
+);
+
+router.post("/:projectId/members/leave",
+    authMiddleware,
+    organizationMiddleware,
+    projectMiddleware,
+    leaveProjectController
+);
 
 export default router;

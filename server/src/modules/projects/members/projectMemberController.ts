@@ -124,3 +124,34 @@ export const removeProjectMemberController = async (req: Request,res: Response )
       data: result,
     });
   };
+
+
+  export const leaveProjectController = async (req: Request,res: Response ) => {
+    
+    const paramsResult = getProjectMembersSchema.safeParse(req.params);
+  
+    if (!paramsResult.success) {
+      throw new ApiErrors(
+        400,
+        paramsResult.error.issues
+          .map((issue) => issue.message)
+          .join(", ")
+      );
+    }
+  
+    const organizationId = req.params.organizationId as string;
+    const projectId = paramsResult.data.projectId;
+    const userId = req.user!.userId;
+  
+    const result = await projectMemberServices.leaveProject(
+      organizationId,
+      projectId,
+      userId
+    );
+  
+    return res.status(200).json({
+      success: true,
+      message: "You have successfully left the project",
+      data: result,
+    });
+  };
