@@ -599,3 +599,84 @@ export const cancelProjectInvitation = async (projectId: string, invitationId: s
         message: "Project invitation cancelled successfully",
     };
 };
+
+
+export const getProjectInvitationDetails = async (userId: string,token: string) => {
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+  
+    const invitation = await prisma.projectInvitation.findUnique({
+      where: {
+        tokenHash,
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            organization: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        invitedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+      },
+    });
+  
+    if (!invitation) {
+      throw new ApiErrors(404, "Invalid invitation");
+    }
+  
+    if (invitation.invitedUserId !== userId) {
+      throw new ApiErrors(
+        403,
+        "You are not authorized to view this invitation"
+      );
+    }
+  
+    // Mark expired invitations
+    if (
+      invitation.status === ProjectInvitationStatus.PENDING &&
+      invitation.expiresAt <= new Date()
+    ) {
+      await prisma.projectInvitation.updateMany({
+        where: {
+          id: invitation.id,
+          status: ProjectInvitationStatus.PENDING,
+        },
+        data: {
+          status: ProjectInvitationStatus.EXPIRED,
+        },
+      });
+  
+      invitation.status = ProjectInvitationStatus.EXPIRED;
+    }
+  
+    return {
+      id: invitation.id,
+      status: invitation.status,
+      role: invitation.role,
+      message: invitation.message,
+      expiresAt: invitation.expiresAt,
+      createdAt: invitation.createdAt,
+  
+      project: invitation.project,
+  
+      organization: invitation.project.organization,
+  
+      invitedBy: invitation.invitedBy,
+    };
+  };

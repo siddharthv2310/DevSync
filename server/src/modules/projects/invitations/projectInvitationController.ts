@@ -6,7 +6,7 @@ import * as projectInvitationServices from "./projectInvitationServices.js";
 import { acceptProjectInvitationSchema, CreateProjectInvitationInput, createProjectInvitationSchema, getProjectInvitationsQuerySchema, } from "./projectInvitationValidation.js";
 
 import { getProjectMembersSchema } from "../members/projectMemberValidation.js";
-import { acceptProjectInvitation, cancelProjectInvitation } from "./projectInvitationServices.js";
+import { acceptProjectInvitation, cancelProjectInvitation, getProjectInvitationDetails } from "./projectInvitationServices.js";
 import { ProjectInvitationStatus } from "@prisma/client";
 import { getMyProjectInvitations } from "../../user/invitations/userInvitationServices.js";
 
@@ -141,3 +141,24 @@ export const cancelProjectInvitationController = async (req: Request, res: Respo
         next(error);
     }
 };
+
+export const getProjectInvitationDetailsController = async (req: Request,res: Response,next: NextFunction) => {
+    try {
+      const token  = req.params.token as string;
+  
+      const userId = req.user?.userId as string;
+  
+      const invitation = await getProjectInvitationDetails(
+        userId,
+        token
+      );
+  
+      res.status(200).json({
+        success: true,
+        invitation,
+      });
+    } 
+    catch (error) {
+      next(error);
+    }
+  };
