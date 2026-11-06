@@ -30,7 +30,6 @@ router.use("/invitations", invitationsRoute);
 router.use("/organizations/:organizationId/t",joinRequestRoute);
 router.use("/organizations/:organizationId/settings",organizationSettingRoute);
 router.use("/organizations/discover",organizationDiscoveryRoute);
-router.use("/organizations/:organizationId/projects",projectRoute);
 router.use("/organizations/:organizationId/teams",teamRoute);
 router.use("/organizations/:organizationId/teams/:teamId/dashboard",teamDashboardRoute);
 router.use("/organizations/:organizationId/:teamId/invitations", teamInvitationRoute);
@@ -41,6 +40,7 @@ router.use("/chat-thread", threadRoute);
 router.use("/chat-reaction",reactionRoute);
 router.use("/conversations/:conversationId",attachmentRoute);
 router.use("/notifications",notificationRoute);
+router.use("/organizations/:organizationId/projects",projectRoute);
 router.use("/organizations/:organizationId/projects",projectMemberRoute);
 router.use("/organizations/:organizationId/projects",projectInvitationRoute)
 

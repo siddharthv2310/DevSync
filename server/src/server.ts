@@ -11,10 +11,10 @@ const startServer = async () => {
         await connectRedis();
 
         // Existing abandoned-upload cleanup
-        startAttachmentCleanupJob();
+        //startAttachmentCleanupJob();
 
         // New permanent S3 file deletion worker
-        startStorageDeletionJob();
+        //startStorageDeletionJob();
 
         const httpServer = createServer(app)
 
