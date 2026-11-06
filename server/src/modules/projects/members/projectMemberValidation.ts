@@ -36,9 +36,17 @@ export const updateProjectMemberRoleSchema = z.object({
 
 export const updateProjectMemberRoleBodySchema = z.object({
     role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
-  });
+});
 
 
+export const transferProjectOwnershipSchema = z.object({
+    targetUserId: z.string().uuid("Invalid target user ID"),
+});
+
+
+
+
+export type TransferProjectOwnershipInput = z.infer< typeof transferProjectOwnershipSchema>;
 
 export type UpdateProjectMemberRoleInput = z.infer<typeof updateProjectMemberRoleSchema>;
 

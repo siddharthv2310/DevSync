@@ -411,7 +411,7 @@ export const removeProjectMember = async ( organizationId: string, projectId: st
 
 
   export const updateProjectMemberRole = async (organizationId: string,projectId: string,targetUserId: string,requesterUserId: string,newRole: projectRole ) => {
-    
+
     return await prisma.$transaction(async (tx) => {
   
       // 1. Prevent users from changing their own role
@@ -572,4 +572,144 @@ export const removeProjectMember = async ( organizationId: string, projectId: st
   
       return updatedMembership;
     });
+  };
+
+
+  export const transferProjectOwnership = async ( organizationId: string, projectId: string, currentOwnerId: string, targetUserId: string) => {
+
+    return await prisma.$transaction( async (tx) => {
+        
+        // 1. Prevent transferring ownership to yourself
+        if (currentOwnerId === targetUserId) {
+          throw new ApiErrors(
+            400,
+            "You are already the project owner"
+          );
+        }
+  
+        // 2. Verify project exists and is active
+        const project = await tx.project.findFirst({
+          where: {
+            id: projectId,
+            organizationId,
+          },
+          select: {
+            id: true,
+            isArchived: true,
+          },
+        });
+  
+        if (!project) {
+          throw new ApiErrors(404, "Project not found");
+        }
+  
+        if (project.isArchived) {
+          throw new ApiErrors(
+            409,
+            "Cannot transfer ownership of an archived project"
+          );
+        }
+  
+        // 3. Verify current user is the OWNER
+        const currentOwner = await tx.projectMember.findUnique({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId: currentOwnerId,
+            },
+          },
+          select: {
+            id: true,
+            role: true,
+          },
+        });
+  
+        if (!currentOwner || currentOwner.role !== projectRole.OWNER) {
+          throw new ApiErrors(
+            403,
+            "Only the project OWNER can transfer ownership"
+          );
+        }
+  
+        // 4. Verify target user is already a project member
+        const targetMember = await tx.projectMember.findUnique({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId: targetUserId,
+            },
+          },
+          select: {
+            id: true,
+            role: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        });
+  
+        if (!targetMember) {
+          throw new ApiErrors(
+            404,
+            "Target user is not a member of this project"
+          );
+        }
+  
+        // 5. Demote current OWNER to ADMIN
+        await tx.projectMember.update({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId: currentOwnerId,
+            },
+          },
+          data: {
+            role: projectRole.ADMIN,
+          },
+        });
+  
+        // 6. Promote target member to OWNER
+        const newOwner = await tx.projectMember.update({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId: targetUserId,
+            },
+          },
+          data: {
+            role: projectRole.OWNER,
+          },
+          select: {
+            projectId: true,
+            role: true,
+            joinedAt: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
+            },
+          },
+        });
+  
+        return {
+          projectId,
+          previousOwner: {
+            userId: currentOwnerId,
+            role: projectRole.ADMIN,
+          },
+          newOwner,
+          transferred: true,
+        };
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }
+    );
   };

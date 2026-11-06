@@ -4,7 +4,7 @@ import { ApiErrors } from "../../../common/errors/ApiErrors.js";
 
 import * as projectMemberServices from "./projectMemberServices.js";
 
-import { getProjectMembersSchema, getProjectMembersQuerySchema, addProjectMemberSchema, removeProjectMemberSchema, updateProjectMemberRoleSchema, updateProjectMemberRoleBodySchema, } from "./projectMemberValidation.js";
+import { getProjectMembersSchema, getProjectMembersQuerySchema, addProjectMemberSchema, removeProjectMemberSchema, updateProjectMemberRoleSchema, updateProjectMemberRoleBodySchema, transferProjectOwnershipSchema, } from "./projectMemberValidation.js";
 
 export const getProjectMembersController = async (req: Request, res: Response) => {
 
@@ -208,3 +208,44 @@ export const updateProjectMemberRoleController = async (req: Request, res: Respo
         data: result,
     });
 };
+
+
+export const transferProjectOwnershipController = async (req: Request,res: Response ) => {
+    
+    const paramsResult = getProjectMembersSchema.safeParse(req.params);
+  
+    if (!paramsResult.success) {
+        throw new ApiErrors(
+          400,
+          paramsResult.error.issues[0]?.message ??  "invalid project id"
+        );
+      }
+  
+    const bodyResult = transferProjectOwnershipSchema.safeParse(req.body);
+  
+    if (!bodyResult.success) {
+      throw new ApiErrors(
+        400,
+        bodyResult.error.issues[0]?.message ?? " invalid transferUser id"
+      );
+    }
+  
+    const organizationId = req.params.organizationId as string;
+    const projectId = paramsResult.data.projectId;
+    const currentOwnerId = req.user!.userId;
+    const targetUserId = bodyResult.data.targetUserId;
+  
+    const result =
+      await projectMemberServices.transferProjectOwnership(
+        organizationId,
+        projectId,
+        currentOwnerId,
+        targetUserId
+      );
+  
+    return res.status(200).json({
+      success: true,
+      message: "Project ownership transferred successfully",
+      data: result,
+    });
+  };
