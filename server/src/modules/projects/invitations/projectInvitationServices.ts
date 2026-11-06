@@ -295,240 +295,307 @@ export const getProjectInvitations = async (projectId: string, query: GetProject
 
 
 
-export const acceptProjectInvitation = async (userId: string,token: string) => {
+export const acceptProjectInvitation = async (userId: string, token: string) => {
 
-  const tokenHash = crypto
-    .createHash("sha256")
-    .update(token)
-    .digest("hex");
-
-  // 1. Find invitation
-  const invitation = await prisma.projectInvitation.findUnique({
-    where: {
-      tokenHash,
-    },
-    include: {
-      project: {
-        select: {
-          id: true,
-          name: true,
-          organizationId: true,
-          isArchived: true,
-        },
-      },
-    },
-  });
-
-  if (!invitation) {
-    throw new ApiErrors(404, "Invalid invitation");
-  }
-
-  // 2. Verify recipient
-  if (invitation.invitedUserId !== userId) {
-    throw new ApiErrors(
-      403,
-      "You are not authorized to accept this invitation"
-    );
-  }
-
-  // 3. Verify invitation status
-  if (invitation.status !== ProjectInvitationStatus.PENDING) {
-    throw new ApiErrors(
-      400,
-      "This invitation is no longer available"
-    );
-  }
-
-  // 4. Check expiration
-  const now = new Date();
-
-  if (invitation.expiresAt <= now) {
-    await prisma.projectInvitation.updateMany({
-      where: {
-        id: invitation.id,
-        status: ProjectInvitationStatus.PENDING,
-      },
-      data: {
-        status: ProjectInvitationStatus.EXPIRED,
-      },
-    });
-
-    throw new ApiErrors(400, "This invitation has expired");
-  }
-
-  // 5. Check whether project is archived
-  if (invitation.project.isArchived) {
-    throw new ApiErrors(
-      400,
-      "Cannot accept an invitation to an archived project"
-    );
-  }
-
-  // 6. Verify user is still an organization member
-  const organizationMembership =
-    await prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: invitation.project.organizationId,
-          userId,
-        },
-      },
-    });
-
-  if (!organizationMembership) {
-    throw new ApiErrors(
-      403,
-      "You must be an organization member to join this project"
-    );
-  }
-
-  // 7. Check existing project membership
-  const existingMembership = await prisma.projectMember.findUnique({
-    where: {
-      projectId_userId: {
-        projectId: invitation.projectId,
-        userId,
-      },
-    },
-  });
-
-  if (existingMembership) {
-    throw new ApiErrors(
-      409,
-      "You are already a member of this project"
-    );
-  }
-
-  // 8. Accept invitation and create membership atomically
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      // Conditional update prevents accepting the same invitation twice.
-      const updatedInvitation = await tx.projectInvitation.updateMany({
-        where: {
-          id: invitation.id,
-          invitedUserId: userId,
-          status: ProjectInvitationStatus.PENDING,
-          expiresAt: {
-            gt: new Date(),
-          },
-        },
-        data: {
-          status: ProjectInvitationStatus.ACCEPTED,
-          respondedAt: new Date(),
-        },
-      });
-
-      if (updatedInvitation.count !== 1) {
-        throw new ApiErrors(
-          409,
-          "Invitation is no longer available or has expired"
-        );
-      }
-
-      // Create project membership with the invited role.
-      const membership = await tx.projectMember.create({
-        data: {
-          projectId: invitation.projectId,
-          userId,
-          role: invitation.role,
-        },
-      });
-
-      return membership;
-    });
-
-    return {
-      message: "Project invitation accepted successfully",
-      membership: result,
-    };
-  } 
-  
-  catch (error: any) {
-    // Prisma unique constraint violation
-    if (error.code === "P2002") {
-      throw new ApiErrors(
-        409,
-        "You are already a member of this project"
-      );
-    }
-
-    throw error;
-  }
-};
-
-export const rejectProjectInvitation = async (userId: string,token: string ) => {
-    
     const tokenHash = crypto
-      .createHash("sha256")
-      .update(token)
-      .digest("hex");
-  
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
     // 1. Find invitation
     const invitation = await prisma.projectInvitation.findUnique({
-      where: {
-        tokenHash,
-      },
+        where: {
+            tokenHash,
+        },
+        include: {
+            project: {
+                select: {
+                    id: true,
+                    name: true,
+                    organizationId: true,
+                    isArchived: true,
+                },
+            },
+        },
     });
-  
+
     if (!invitation) {
-      throw new ApiErrors(404, "Invalid invitation");
+        throw new ApiErrors(404, "Invalid invitation");
     }
-  
+
     // 2. Verify recipient
     if (invitation.invitedUserId !== userId) {
-      throw new ApiErrors(
-        403,
-        "You are not authorized to reject this invitation"
-      );
+        throw new ApiErrors(
+            403,
+            "You are not authorized to accept this invitation"
+        );
     }
-  
+
     // 3. Verify invitation status
     if (invitation.status !== ProjectInvitationStatus.PENDING) {
-      throw new ApiErrors(
-        400,
-        "This invitation is no longer available"
-      );
+        throw new ApiErrors(
+            400,
+            "This invitation is no longer available"
+        );
     }
-  
+
+    // 4. Check expiration
+    const now = new Date();
+
+    if (invitation.expiresAt <= now) {
+        await prisma.projectInvitation.updateMany({
+            where: {
+                id: invitation.id,
+                status: ProjectInvitationStatus.PENDING,
+            },
+            data: {
+                status: ProjectInvitationStatus.EXPIRED,
+            },
+        });
+
+        throw new ApiErrors(400, "This invitation has expired");
+    }
+
+    // 5. Check whether project is archived
+    if (invitation.project.isArchived) {
+        throw new ApiErrors(
+            400,
+            "Cannot accept an invitation to an archived project"
+        );
+    }
+
+    // 6. Verify user is still an organization member
+    const organizationMembership =
+        await prisma.organizationMember.findUnique({
+            where: {
+                organizationId_userId: {
+                    organizationId: invitation.project.organizationId,
+                    userId,
+                },
+            },
+        });
+
+    if (!organizationMembership) {
+        throw new ApiErrors(
+            403,
+            "You must be an organization member to join this project"
+        );
+    }
+
+    // 7. Check existing project membership
+    const existingMembership = await prisma.projectMember.findUnique({
+        where: {
+            projectId_userId: {
+                projectId: invitation.projectId,
+                userId,
+            },
+        },
+    });
+
+    if (existingMembership) {
+        throw new ApiErrors(
+            409,
+            "You are already a member of this project"
+        );
+    }
+
+    // 8. Accept invitation and create membership atomically
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            // Conditional update prevents accepting the same invitation twice.
+            const updatedInvitation = await tx.projectInvitation.updateMany({
+                where: {
+                    id: invitation.id,
+                    invitedUserId: userId,
+                    status: ProjectInvitationStatus.PENDING,
+                    expiresAt: {
+                        gt: new Date(),
+                    },
+                },
+                data: {
+                    status: ProjectInvitationStatus.ACCEPTED,
+                    respondedAt: new Date(),
+                },
+            });
+
+            if (updatedInvitation.count !== 1) {
+                throw new ApiErrors(
+                    409,
+                    "Invitation is no longer available or has expired"
+                );
+            }
+
+            // Create project membership with the invited role.
+            const membership = await tx.projectMember.create({
+                data: {
+                    projectId: invitation.projectId,
+                    userId,
+                    role: invitation.role,
+                },
+            });
+
+            return membership;
+        });
+
+        return {
+            message: "Project invitation accepted successfully",
+            membership: result,
+        };
+    }
+
+    catch (error: any) {
+        // Prisma unique constraint violation
+        if (error.code === "P2002") {
+            throw new ApiErrors(
+                409,
+                "You are already a member of this project"
+            );
+        }
+
+        throw error;
+    }
+};
+
+export const rejectProjectInvitation = async (userId: string, token: string) => {
+
+    const tokenHash = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
+    // 1. Find invitation
+    const invitation = await prisma.projectInvitation.findUnique({
+        where: {
+            tokenHash,
+        },
+    });
+
+    if (!invitation) {
+        throw new ApiErrors(404, "Invalid invitation");
+    }
+
+    // 2. Verify recipient
+    if (invitation.invitedUserId !== userId) {
+        throw new ApiErrors(
+            403,
+            "You are not authorized to reject this invitation"
+        );
+    }
+
+    // 3. Verify invitation status
+    if (invitation.status !== ProjectInvitationStatus.PENDING) {
+        throw new ApiErrors(
+            400,
+            "This invitation is no longer available"
+        );
+    }
+
     // 4. Check expiry
     if (invitation.expiresAt <= new Date()) {
-      await prisma.projectInvitation.updateMany({
-        where: {
-          id: invitation.id,
-          status: ProjectInvitationStatus.PENDING,
-        },
-        data: {
-          status: ProjectInvitationStatus.EXPIRED,
-        },
-      });
-  
-      throw new ApiErrors(400, "This invitation has expired");
+        await prisma.projectInvitation.updateMany({
+            where: {
+                id: invitation.id,
+                status: ProjectInvitationStatus.PENDING,
+            },
+            data: {
+                status: ProjectInvitationStatus.EXPIRED,
+            },
+        });
+
+        throw new ApiErrors(400, "This invitation has expired");
     }
-  
+
     // 5. Reject invitation
     const updatedInvitation = await prisma.projectInvitation.updateMany({
-      where: {
-        id: invitation.id,
-        invitedUserId: userId,
-        status: ProjectInvitationStatus.PENDING,
-        expiresAt: {
-          gt: new Date(),
+        where: {
+            id: invitation.id,
+            invitedUserId: userId,
+            status: ProjectInvitationStatus.PENDING,
+            expiresAt: {
+                gt: new Date(),
+            },
         },
-      },
-      data: {
-        status: ProjectInvitationStatus.REJECTED,
-        respondedAt: new Date(),
-      },
+        data: {
+            status: ProjectInvitationStatus.REJECTED,
+            respondedAt: new Date(),
+        },
     });
-  
+
     if (updatedInvitation.count !== 1) {
-      throw new ApiErrors(
-        409,
-        "Invitation is no longer available or has expired"
-      );
+        throw new ApiErrors(
+            409,
+            "Invitation is no longer available or has expired"
+        );
     }
-  
+
     return {
-      message: "Project invitation rejected successfully",
+        message: "Project invitation rejected successfully",
     };
-  };
+};
+
+
+export const cancelProjectInvitation = async (projectId: string, invitationId: string) => {
+
+    // 1. Find invitation
+    const invitation = await prisma.projectInvitation.findFirst({
+        where: {
+            id: invitationId,
+            projectId,
+        },
+    });
+
+    if (!invitation) {
+        throw new ApiErrors(404, "Project invitation not found");
+    }
+
+    // 2. Check invitation status
+    if (invitation.status !== ProjectInvitationStatus.PENDING) {
+        throw new ApiErrors(
+            400,
+            "Only pending invitations can be cancelled"
+        );
+    }
+
+    // 3. Handle expired invitation
+    if (invitation.expiresAt <= new Date()) {
+        await prisma.projectInvitation.updateMany({
+            where: {
+                id: invitationId,
+                projectId,
+                status: ProjectInvitationStatus.PENDING,
+            },
+            data: {
+                status: ProjectInvitationStatus.EXPIRED,
+            },
+        });
+
+        throw new ApiErrors(400, "This invitation has already expired");
+    }
+
+    // 4. Cancel invitation
+    const updatedInvitation = await prisma.projectInvitation.updateMany({
+        where: {
+            id: invitationId,
+            projectId,
+            status: ProjectInvitationStatus.PENDING,
+            expiresAt: {
+                gt: new Date(),
+            },
+        },
+        data: {
+            status: ProjectInvitationStatus.CANCELLED,
+            respondedAt: new Date(),
+        },
+    });
+
+    if (updatedInvitation.count !== 1) {
+        throw new ApiErrors(
+            409,
+            "Invitation is no longer available"
+        );
+    }
+
+    return {
+        message: "Project invitation cancelled successfully",
+    };
+};

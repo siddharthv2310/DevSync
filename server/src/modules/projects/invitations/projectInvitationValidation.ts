@@ -34,6 +34,7 @@ export const rejectProjectInvitationSchema = z.object({
   token: z.string().min(1, "Invitation token is required"),
 });
 
+
 export type RejectProjectInvitationInput = z.infer<typeof rejectProjectInvitationSchema>;
 export type AcceptProjectInvitationInput = z.infer<typeof acceptProjectInvitationSchema>;
 export type GetProjectInvitationsQuery = z.infer<typeof getProjectInvitationsQuerySchema>;
