@@ -8,7 +8,14 @@ import { requireProjectPermission } from "../../../middlewares/projectPermission
 
 import { projectPermission, } from "../projectPermissions.js";
 
-import { acceptProjectInvitationController, cancelProjectInvitationController, createProjectInvitationController, getProjectInvitationDetailsController, getProjectInvitationsController, rejectProjectInvitationController, } from "./projectInvitationController.js";
+import { 
+    acceptProjectInvitationController,
+    cancelProjectInvitationController, 
+    createProjectInvitationController, 
+    getProjectInvitationDetailsController, 
+    getProjectInvitationsController, 
+    rejectProjectInvitationController, 
+} from "./projectInvitationController.js";
 
 const router = Router({ mergeParams: true });
 
