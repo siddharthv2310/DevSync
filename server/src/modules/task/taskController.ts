@@ -51,12 +51,12 @@ export const getTaskDetailsController = async (req: Request, res: Response, next
 
 // GET PROJECT TASKS
 export const getProjectTasksController = async (req: Request, res: Response, next: NextFunction) => {
-
     try {
         const { projectId } = taskParamsSchema.parse(req.params);
-        const { page, limit } = listTasksQuerySchema.parse(req.query);
 
-        const result = await getProjectTasks(projectId, page, limit);
+        const query = listTasksQuerySchema.parse(req.query);
+
+        const result = await getProjectTasks(projectId, query);
 
         return res.status(200).json({
             success: true,

@@ -3,7 +3,7 @@ import { OrganizationRole, projectRole } from "@prisma/client";
 
 import { assignUserToTask, removeUserFromTask, getTaskAssignees, } from "./taskAssignmentServices.js";
 
-import { taskAssigneeParamsSchema, assignTaskUserSchema, } from "./taskAssigment/taskAssignmentValidation.js";
+import { taskAssigneeParamsSchema,assignTaskUserSchema, } from "./taskValidator.js";
 
 const canManageAnyTask = (req: Request): boolean => {
     return (
