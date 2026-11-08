@@ -102,6 +102,13 @@ model User {
   triggeredNotification Notification[]     @relation("notificationActor")
   pushSubscription      PushSubscription[]
 
+  // Task relationships
+  createdTasks          Task[]                 @relation("taskCreator")
+  taskAssignments       TaskAssignee[]
+  taskComments          TaskComment[]          @relation("taskCommentAuthor")
+  taskAttachments       TaskAttachment[]       @relation("taskAttachmentUploader")
+  taskAttachmentUploads TaskAttachmentUpload[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -231,6 +238,10 @@ model Project {
   members       ProjectMember[]
   conversations Conversation[]
   invitations   ProjectInvitation[]
+
+  board      Board?
+  tasks      Task[]
+  taskLabels TaskLabel[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -696,9 +707,222 @@ model StorageDeletionJob {
 
 //task related models 
 
+model Task {
+  id          String  @id @default(uuid())
+  projectId   String
+  columnId    String
+  createdById String?
 
+  title       String
+  description String?
 
+  priority TaskPriority @default(MEDIUM)
 
+  startDate DateTime?
+  dueDate   DateTime?
+
+  // Estimated work duration in minutes
+  estimateMinutes Int?
+
+  // Position inside the current board column
+  position Int @default(0)
+
+  // One-level subtask relationship
+  parentTaskId String?
+  parentTask   Task?   @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks     Task[]  @relation("TaskSubtasks")
+
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  column    BoardColumn @relation(fields: [columnId, projectId], references: [id, projectId], onDelete: Restrict)
+  createdBy User?       @relation("taskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  assignees         TaskAssignee[]
+  labels            TaskLabelAssignment[]
+  comments          TaskComment[]
+  attachments       TaskAttachment[]
+  attachmentUploads TaskAttachmentUpload[]
+
+  blockingTasks TaskDependency[] @relation("blockingTasks")
+  blockedBy     TaskDependency[] @relation("blockedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, columnId, position])
+  @@index([projectId, priority])
+  @@index([projectId, dueDate])
+  @@index([createdById])
+  @@index([parentTaskId])
+}
+
+model Board {
+  id        String @id @default(uuid())
+  projectId String @unique
+
+  name        String  @default("Project Board")
+  description String?
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns BoardColumn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, projectId])
+}
+
+model BoardColumn {
+  id        String @id @default(uuid())
+  boardId   String
+  projectId String
+
+  name     String
+  category BoardColumnCategory @default(NOT_STARTED)
+
+  position  Int     @default(0)
+  isDefault Boolean @default(false)
+  wipLimit  Int?
+
+  board Board @relation(fields: [boardId, projectId], references: [id, projectId], onDelete: Cascade)
+
+  tasks Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, projectId])
+  @@index([boardId, position])
+  @@index([projectId])
+}
+
+model TaskAssignee {
+  id     String @id @default(uuid())
+  taskId String
+  userId String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+  @@index([userId])
+}
+
+model TaskLabel {
+  id        String @id @default(uuid())
+  projectId String
+
+  name  String
+  color String?
+
+  project Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   TaskLabelAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model TaskLabelAssignment {
+  id      String @id @default(uuid())
+  taskId  String
+  labelId String
+
+  task  Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label TaskLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, labelId])
+  @@index([labelId])
+}
+
+model TaskComment {
+  id       String  @id @default(uuid())
+  taskId   String
+  authorId String?
+
+  content String
+
+  isEdited Boolean   @default(false)
+  editedAt DateTime?
+
+  task   Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User? @relation("taskCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId, createdAt])
+  @@index([authorId])
+}
+
+model TaskAttachment {
+  id String @id @default(uuid())
+
+  taskId String
+
+  originalName String
+  storageKey   String @unique
+  mimeType     String
+  sizeBytes    Int
+
+  uploadedById String?
+  uploadedBy   User?   @relation("taskAttachmentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  deletionPending Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([uploadedById])
+}
+
+model TaskAttachmentUpload {
+  id     String @id @default(uuid())
+  taskId String
+  userId String
+
+  originalName String
+  storageKey   String @unique
+  mimeType     String
+  sizeBytes    Int
+
+  status AttachmentUploadStatus @default(PENDING)
+
+  expiresAt   DateTime
+  completedAt DateTime?
+  consumedAt  DateTime?
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model TaskDependency {
+  id String @id @default(uuid())
+
+  blockingTaskId String
+  blockedTaskId  String
+
+  blockingTask Task @relation("blockingTasks", fields: [blockingTaskId], references: [id], onDelete: Cascade)
+  blockedTask  Task @relation("blockedBy", fields: [blockedTaskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([blockingTaskId, blockedTaskId])
+  @@index([blockedTaskId])
+}
 
 enum AuthProvider {
   EMAIL
@@ -806,4 +1030,17 @@ enum StorageDeletionStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum BoardColumnCategory {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
 }
