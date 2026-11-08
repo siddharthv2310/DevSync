@@ -924,6 +924,10 @@ model TaskDependency {
   @@index([blockedTaskId])
 }
 
+
+
+
+
 enum AuthProvider {
   EMAIL
   GOOGLE

@@ -1,16 +1,16 @@
 Stage 1 — Database and architecture
-[ ] Finalize Task and related Prisma models
-[ ] Define enums, relations, constraints and indexes
-[ ] Prepare ER diagram
-[ ] Run Prisma migration
+[.] Finalize Task and related Prisma models
+[.] Define enums, relations, constraints and indexes
+[.] Prepare ER diagram
+[.] Run Prisma migration
 
 Stage 2 — Permissions
-[ ] Define task permissions
-[ ] Map permissions to project roles
-[ ] Implement authorization checks
+[.] Define task permissions
+[.] Map permissions to project roles
+[.] Implement authorization checks
 
 Stage 3 — Core Task CRUD
-[ ] Create task API
+[] Create task API
 [ ] Get task details API
 [ ] List project tasks API
 [ ] Update task API
