@@ -2,7 +2,7 @@ import { projectRole } from "@prisma/client";
 import { projectPermission } from "./projectPermissions.js";
 
 export const projectRolePermissions: Record<projectRole, projectPermission[]> = {
-  
+
   [projectRole.OWNER]: [
     // Project
     projectPermission.VIEW_PROJECT,
@@ -26,6 +26,12 @@ export const projectRolePermissions: Record<projectRole, projectPermission[]> = 
     projectPermission.CREATE_INVITATION,
     projectPermission.VIEW_INVITATIONS,
     projectPermission.CANCEL_INVITATION,
+
+    // Tasks
+    projectPermission.CREATE_TASK,
+    projectPermission.VIEW_TASK,
+    projectPermission.UPDATE_TASK,
+    projectPermission.DELETE_TASK,
   ],
 
   [projectRole.ADMIN]: [
@@ -49,17 +55,31 @@ export const projectRolePermissions: Record<projectRole, projectPermission[]> = 
     projectPermission.CREATE_INVITATION,
     projectPermission.VIEW_INVITATIONS,
     projectPermission.CANCEL_INVITATION,
+
+    // Tasks
+    projectPermission.CREATE_TASK,
+    projectPermission.VIEW_TASK,
+    projectPermission.UPDATE_TASK,
+    projectPermission.DELETE_TASK,
   ],
 
   [projectRole.MEMBER]: [
     projectPermission.VIEW_PROJECT,
     projectPermission.VIEW_MEMBERS,
     projectPermission.VIEW_SETTINGS,
+
+    // Tasks
+    projectPermission.CREATE_TASK,
+    projectPermission.VIEW_TASK,
+    projectPermission.UPDATE_TASK,
   ],
 
   [projectRole.VIEWER]: [
     projectPermission.VIEW_PROJECT,
     projectPermission.VIEW_MEMBERS,
     projectPermission.VIEW_SETTINGS,
+
+    // Tasks
+    projectPermission.VIEW_TASK,
   ],
 };

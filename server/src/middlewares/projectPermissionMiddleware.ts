@@ -11,6 +11,7 @@ const archivedProjectAllowedPermissions: projectPermission[] = [
   projectPermission.VIEW_MEMBERS,
   projectPermission.VIEW_SETTINGS,
   projectPermission.VIEW_INVITATIONS,
+  projectPermission.VIEW_TASK,
   projectPermission.RESTORE_PROJECT,
   projectPermission.DELETE_PROJECT,
 ];

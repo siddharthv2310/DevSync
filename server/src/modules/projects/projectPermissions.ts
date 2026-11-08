@@ -21,4 +21,10 @@ export enum projectPermission {
     CREATE_INVITATION = "project-invitations:create",
     VIEW_INVITATIONS = "project-invitations:view",
     CANCEL_INVITATION = "project-invitations:cancel",
+
+    // Project tasks
+    CREATE_TASK = "task:create",
+    VIEW_TASK = "task:view",
+    UPDATE_TASK = "task:update",
+    DELETE_TASK = "task:delete",
   }
