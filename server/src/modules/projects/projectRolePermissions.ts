@@ -1,10 +1,8 @@
 import { projectRole } from "@prisma/client";
 import { projectPermission } from "./projectPermissions.js";
 
-export const projectRolePermissions: Record<
-  projectRole,
-  projectPermission[]
-> = {
+export const projectRolePermissions: Record<projectRole, projectPermission[]> = {
+  
   [projectRole.OWNER]: [
     // Project
     projectPermission.VIEW_PROJECT,
