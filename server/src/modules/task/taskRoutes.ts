@@ -14,6 +14,7 @@ import {
     updateTaskController,
     deleteTaskController,
 } from "./taskController.js";
+import { assignUserToTaskController, getTaskAssigneesController, removeUserFromTaskController } from "./taskAssignmentController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -51,6 +52,24 @@ router.patch("/:taskId",
 router.delete("/:taskId",
     requireProjectPermission(projectPermission.DELETE_TASK),
     deleteTaskController
+);
+
+
+router.post("/:taskId/assignees",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    assignUserToTaskController
+);
+
+
+router.get("/:taskId/assignees",
+    requireProjectPermission(projectPermission.VIEW_TASK),
+    getTaskAssigneesController
+);
+
+
+router.delete("/:taskId/assignees/:userId",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    removeUserFromTaskController
 );
 
 export default router;

@@ -72,22 +72,22 @@ export const updateTaskSchema = z.object({
         .nullable()
         .optional(),
 })
-.refine(
-    (data) => Object.keys(data).length > 0,
-    {
-        message: "At least one field must be provided",
-    }
-)
-.refine(
-    (data) =>
-        !data.startDate ||
-        !data.dueDate ||
-        data.startDate <= data.dueDate,
-    {
-        message: "Start date cannot be after due date",
-        path: ["dueDate"],
-    }
-);
+    .refine(
+        (data) => Object.keys(data).length > 0,
+        {
+            message: "At least one field must be provided",
+        }
+    )
+    .refine(
+        (data) =>
+            !data.startDate ||
+            !data.dueDate ||
+            data.startDate <= data.dueDate,
+        {
+            message: "Start date cannot be after due date",
+            path: ["dueDate"],
+        }
+    );
 
 // List tasks
 export const listTasksQuerySchema = z.object({
@@ -96,5 +96,19 @@ export const listTasksQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+
+export const taskAssigneeParamsSchema = z.object({
+    projectId: z.string().uuid("Invalid project ID"),
+    taskId: z.string().uuid("Invalid task ID"),
+    userId: z.string().uuid("Invalid user ID").optional(),
+});
+
+export const assignTaskUserSchema = z.object({
+    userId: z.string().uuid("Invalid user ID"),
+});
+
+
+
+export type AssignTaskUserInput = z.infer<typeof assignTaskUserSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
