@@ -19,6 +19,7 @@ import reactionRoute from "../../modules/chat/reaction/index.js"
 import attachmentRoute from "../../modules/chat/attachment/index.js"
 import notificationRoute from "../../modules/Notification/index.js"
 import userRoute from "../../modules/user/invitations/index.js"
+import taskRouter from "../../modules/task/index.js"
 
 
 const router = Router(); 
@@ -44,5 +45,6 @@ router.use("/organizations/:organizationId/projects",projectRoute);
 router.use("/organizations/:organizationId/projects",projectMemberRoute);
 router.use("/organizations/:organizationId/projects/:projectId/invitations",projectInvitationRoute)
 router.use("/user",userRoute);
+router.use("/projects/:projectId",taskRouter);
 
 export default router;
