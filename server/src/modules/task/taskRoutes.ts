@@ -13,6 +13,7 @@ import { assignLabelToTaskController, createTaskLabelController, deleteTaskLabel
 import { createSubtaskController, getTaskSubtasksController } from "./taskSubtaskController.js";
 import { createTaskDependencyController, getTaskDependenciesController, removeTaskDependencyController } from "./taskDependencyController.js";
 import { createTaskCommentController, deleteTaskCommentController, getTaskCommentsController, updateTaskCommentController } from "./taskComments/taskCommentController.js";
+import { completeTaskAttachmentUploadController, deleteTaskAttachmentController, downloadTaskAttachmentController, generateTaskAttachmentUploadUrlController, getTaskAttachmentsController } from "./taskAttachmentController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -157,5 +158,32 @@ router.delete("/:taskId/comments/:commentId",
     deleteTaskCommentController
 );
 
+
+// Task Attachments
+
+router.post( "/:taskId/attachments/upload-url",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    generateTaskAttachmentUploadUrlController
+  );
+  
+  router.post( "/:taskId/attachments/complete",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    completeTaskAttachmentUploadController
+  );
+  
+  router.get("/:taskId/attachments",
+    requireProjectPermission(projectPermission.VIEW_TASK),
+    getTaskAttachmentsController
+  );
+  
+  router.get( "/:taskId/attachments/:attachmentId/download",
+    requireProjectPermission(projectPermission.VIEW_TASK),
+    downloadTaskAttachmentController
+  );
+  
+  router.delete("/:taskId/attachments/:attachmentId",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    deleteTaskAttachmentController
+  );
 
 export default router;
