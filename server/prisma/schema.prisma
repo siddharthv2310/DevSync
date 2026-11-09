@@ -108,6 +108,8 @@ model User {
   taskComments          TaskComment[]          @relation("taskCommentAuthor")
   taskAttachments       TaskAttachment[]       @relation("taskAttachmentUploader")
   taskAttachmentUploads TaskAttachmentUpload[]
+  taskCommentMentions TaskCommentMention[]
+  
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -854,6 +856,8 @@ model TaskComment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  mentions TaskCommentMention[]
+
   @@index([taskId, createdAt])
   @@index([authorId])
 }
@@ -924,6 +928,17 @@ model TaskDependency {
   @@index([blockedTaskId])
 }
 
+model TaskCommentMention {
+  id        String      @id @default(uuid())
+  commentId String
+  userId    String
+  comment   TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([commentId, userId])
+  @@index([userId])
+}
 
 
 

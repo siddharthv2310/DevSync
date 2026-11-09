@@ -35,6 +35,11 @@ export const projectRolePermissions: Record<projectRole, projectPermission[]> = 
 
     // Task lebel
     projectPermission.MANAGE_TASK_LABELS,
+
+    // task comments
+    projectPermission.CREATE_TASK_COMMENT,
+    projectPermission.UPDATE_TASK_COMMENT,
+    projectPermission.DELETE_TASK_COMMENT,
   ],
 
   [projectRole.ADMIN]: [
@@ -67,6 +72,11 @@ export const projectRolePermissions: Record<projectRole, projectPermission[]> = 
     
     // Task labels
     projectPermission.MANAGE_TASK_LABELS,
+
+    // task comments
+    projectPermission.CREATE_TASK_COMMENT,
+    projectPermission.UPDATE_TASK_COMMENT,
+    projectPermission.DELETE_TASK_COMMENT,
   ],
 
   [projectRole.MEMBER]: [
@@ -78,6 +88,11 @@ export const projectRolePermissions: Record<projectRole, projectPermission[]> = 
     projectPermission.CREATE_TASK,
     projectPermission.VIEW_TASK,
     projectPermission.UPDATE_TASK,
+
+    // task comments
+    projectPermission.CREATE_TASK_COMMENT,
+    projectPermission.UPDATE_TASK_COMMENT,
+    projectPermission.DELETE_TASK_COMMENT,
   ],
 
   [projectRole.VIEWER]: [

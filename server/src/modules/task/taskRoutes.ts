@@ -7,9 +7,11 @@ import { requireProjectPermission } from "../../middlewares/projectPermissionMid
 
 import { projectPermission } from "../projects/projectPermissions.js";
 
-import {createTaskController,getTaskDetailsController,getProjectTasksController,updateTaskController,deleteTaskController,} from "./taskController.js";
+import { createTaskController, getTaskDetailsController, getProjectTasksController, updateTaskController, deleteTaskController, } from "./taskController.js";
 import { assignUserToTaskController, getTaskAssigneesController, removeUserFromTaskController } from "./taskAssignmentController.js";
 import { assignLabelToTaskController, createTaskLabelController, deleteTaskLabelController, getProjectTaskLabelsController, removeLabelFromTaskController, updateTaskLabelController } from "./taskLabelController.js";
+import { createSubtaskController, getTaskSubtasksController } from "./taskSubtaskController.js";
+import { createTaskDependencyController, getTaskDependenciesController, removeTaskDependencyController } from "./taskDependencyController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -99,6 +101,36 @@ router.post("/:taskId/labels",
 router.delete("/:taskId/labels/:labelId",
     requireProjectPermission(projectPermission.UPDATE_TASK),
     removeLabelFromTaskController
+);
+
+
+// Subtasks
+
+router.post("/:taskId/subtasks",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    createSubtaskController
+);
+
+router.get("/:taskId/subtasks",
+    requireProjectPermission(projectPermission.VIEW_TASK),
+    getTaskSubtasksController
+);
+
+
+// Task dependencies
+router.post("/:taskId/dependencies",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    createTaskDependencyController
+);
+
+router.get("/:taskId/dependencies",
+    requireProjectPermission(projectPermission.VIEW_TASK),
+    getTaskDependenciesController
+);
+
+router.delete("/:taskId/dependencies/:blockingTaskId",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    removeTaskDependencyController
 );
 
 
