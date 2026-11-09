@@ -32,6 +32,9 @@ export const projectRolePermissions: Record<projectRole, projectPermission[]> = 
     projectPermission.VIEW_TASK,
     projectPermission.UPDATE_TASK,
     projectPermission.DELETE_TASK,
+
+    // Task lebel
+    projectPermission.MANAGE_TASK_LABELS,
   ],
 
   [projectRole.ADMIN]: [
@@ -61,6 +64,9 @@ export const projectRolePermissions: Record<projectRole, projectPermission[]> = 
     projectPermission.VIEW_TASK,
     projectPermission.UPDATE_TASK,
     projectPermission.DELETE_TASK,
+    
+    // Task labels
+    projectPermission.MANAGE_TASK_LABELS,
   ],
 
   [projectRole.MEMBER]: [

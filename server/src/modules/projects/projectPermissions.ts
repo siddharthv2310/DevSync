@@ -27,4 +27,8 @@ export enum projectPermission {
     VIEW_TASK = "task:view",
     UPDATE_TASK = "task:update",
     DELETE_TASK = "task:delete",
+
+
+    // Task lebels
+    MANAGE_TASK_LABELS = " task-lebel:manage",
   }
