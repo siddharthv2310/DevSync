@@ -191,6 +191,45 @@ export const assignTaskLabelSchema = z.object({
     labelId: z.string().uuid(),
 });
 
+
+// Create a subtask (inherits its parent's column)
+export const createSubtaskSchema = z.object({
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().max(10000).nullable().optional(),
+    priority: z.nativeEnum(TaskPriority).optional(),
+    startDate: z.coerce.date().nullable().optional(),
+    dueDate: z.coerce.date().nullable().optional(),
+    estimateMinutes: z.number().int().positive().max(525600).nullable().optional(),
+  }).refine(
+    (data) =>
+      !data.startDate ||
+      !data.dueDate ||
+      data.startDate <= data.dueDate,
+    {
+      message: "Start date cannot be after due date",
+      path: ["dueDate"],
+    }
+  );
+  
+  // Add a dependency: the supplied task must block the task in the URL.
+
+  export const createTaskDependencySchema = z.object({
+    blockingTaskId: z.string().uuid("Invalid blocking task ID"),
+  });
+  
+  export const subtaskParamsSchema = z.object({
+    projectId: z.string().uuid(),
+    taskId: z.string().uuid(),
+  });
+  
+  export const taskDependencyParamsSchema = z.object({
+    projectId: z.string().uuid(),
+    taskId: z.string().uuid(),
+    blockingTaskId: z.string().uuid(),
+  });
+  
+export type CreateSubtaskInput = z.infer<typeof createSubtaskSchema>;
+export type CreateTaskDependencyInput = z.infer<typeof createTaskDependencySchema>;
 export type CreateTaskLabelInput = z.infer<typeof createTaskLabelSchema>;
 export type UpdateTaskLabelInput = z.infer<typeof updateTaskLabelSchema>;
 export type AssignTaskUserInput = z.infer<typeof assignTaskUserSchema>;
