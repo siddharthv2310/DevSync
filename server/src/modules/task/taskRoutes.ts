@@ -12,6 +12,7 @@ import { assignUserToTaskController, getTaskAssigneesController, removeUserFromT
 import { assignLabelToTaskController, createTaskLabelController, deleteTaskLabelController, getProjectTaskLabelsController, removeLabelFromTaskController, updateTaskLabelController } from "./taskLabelController.js";
 import { createSubtaskController, getTaskSubtasksController } from "./taskSubtaskController.js";
 import { createTaskDependencyController, getTaskDependenciesController, removeTaskDependencyController } from "./taskDependencyController.js";
+import { createTaskCommentController, deleteTaskCommentController, getTaskCommentsController, updateTaskCommentController } from "./taskComments/taskCommentController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -131,6 +132,29 @@ router.get("/:taskId/dependencies",
 router.delete("/:taskId/dependencies/:blockingTaskId",
     requireProjectPermission(projectPermission.UPDATE_TASK),
     removeTaskDependencyController
+);
+
+
+// Task comments
+
+router.post( "/:taskId/comments",
+    requireProjectPermission(projectPermission.CREATE_TASK_COMMENT),
+    createTaskCommentController
+);
+
+router.get("/:taskId/comments",
+    requireProjectPermission(projectPermission.VIEW_TASK),
+    getTaskCommentsController
+);
+
+router.patch("/:taskId/comments/:commentId",
+    requireProjectPermission(projectPermission.UPDATE_TASK_COMMENT),
+    updateTaskCommentController
+);
+
+router.delete("/:taskId/comments/:commentId",
+    requireProjectPermission(projectPermission.DELETE_TASK_COMMENT),
+    deleteTaskCommentController
 );
 
 
