@@ -7,14 +7,9 @@ import { requireProjectPermission } from "../../middlewares/projectPermissionMid
 
 import { projectPermission } from "../projects/projectPermissions.js";
 
-import {
-    createTaskController,
-    getTaskDetailsController,
-    getProjectTasksController,
-    updateTaskController,
-    deleteTaskController,
-} from "./taskController.js";
+import {createTaskController,getTaskDetailsController,getProjectTasksController,updateTaskController,deleteTaskController,} from "./taskController.js";
 import { assignUserToTaskController, getTaskAssigneesController, removeUserFromTaskController } from "./taskAssignmentController.js";
+import { assignLabelToTaskController, createTaskLabelController, deleteTaskLabelController, getProjectTaskLabelsController, removeLabelFromTaskController, updateTaskLabelController } from "./taskLabelController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -54,6 +49,7 @@ router.delete("/:taskId",
     deleteTaskController
 );
 
+// routes related to task assignment
 
 router.post("/:taskId/assignees",
     requireProjectPermission(projectPermission.UPDATE_TASK),
@@ -71,5 +67,39 @@ router.delete("/:taskId/assignees/:userId",
     requireProjectPermission(projectPermission.UPDATE_TASK),
     removeUserFromTaskController
 );
+
+// Project label catalog
+
+router.post("/labels",
+    requireProjectPermission(projectPermission.MANAGE_TASK_LABELS),
+    createTaskLabelController
+);
+
+router.get("/labels",
+    requireProjectPermission(projectPermission.VIEW_TASK),
+    getProjectTaskLabelsController
+);
+
+router.patch("/labels/:labelId",
+    requireProjectPermission(projectPermission.MANAGE_TASK_LABELS),
+    updateTaskLabelController
+);
+
+router.delete("/labels/:labelId",
+    requireProjectPermission(projectPermission.MANAGE_TASK_LABELS),
+    deleteTaskLabelController
+);
+
+// Task label assignments
+router.post("/:taskId/labels",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    assignLabelToTaskController
+);
+
+router.delete("/:taskId/labels/:labelId",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    removeLabelFromTaskController
+);
+
 
 export default router;

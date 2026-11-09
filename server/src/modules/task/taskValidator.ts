@@ -93,60 +93,60 @@ export const updateTaskSchema = z.object({
 // List tasks
 
 export const listTasksQuerySchema = z.object({
-  // Pagination
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+    // Pagination
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
 
-  // Search
-  search: z.string().trim().max(200).optional(),
+    // Search
+    search: z.string().trim().max(200).optional(),
 
-  // Filters
-  priority: z.nativeEnum(TaskPriority).optional(),
-  status: z.nativeEnum(BoardColumnCategory).optional(),
-  assigneeId: z.string().uuid().optional(),
-  columnId: z.string().uuid().optional(),
+    // Filters
+    priority: z.nativeEnum(TaskPriority).optional(),
+    status: z.nativeEnum(BoardColumnCategory).optional(),
+    assigneeId: z.string().uuid().optional(),
+    columnId: z.string().uuid().optional(),
 
-  // Date filters
-  startDateFrom: z.coerce.date().optional(),
-  startDateTo: z.coerce.date().optional(),
-  dueDateFrom: z.coerce.date().optional(),
-  dueDateTo: z.coerce.date().optional(),
+    // Date filters
+    startDateFrom: z.coerce.date().optional(),
+    startDateTo: z.coerce.date().optional(),
+    dueDateFrom: z.coerce.date().optional(),
+    dueDateTo: z.coerce.date().optional(),
 
-  // Overdue filter
-  overdue: z.enum(["true", "false"])
-    .transform((value) => value === "true")
-    .optional(),
+    // Overdue filter
+    overdue: z.enum(["true", "false"])
+        .transform((value) => value === "true")
+        .optional(),
 
-  // Sorting
-  sortBy: z.enum([
-    "createdAt",
-    "updatedAt",
-    "dueDate",
-    "startDate",
-    "title",
-    "priority",
-    "position",
-  ]).default("createdAt"),
+    // Sorting
+    sortBy: z.enum([
+        "createdAt",
+        "updatedAt",
+        "dueDate",
+        "startDate",
+        "title",
+        "priority",
+        "position",
+    ]).default("createdAt"),
 
-  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+    sortOrder: z.enum(["asc", "desc"]).default("desc"),
 }).refine(
-  (data) =>
-    !data.startDateFrom ||
-    !data.startDateTo ||
-    data.startDateFrom <= data.startDateTo,
-  {
-    message: "Start date range is invalid",
-    path: ["startDateTo"],
-  }
+    (data) =>
+        !data.startDateFrom ||
+        !data.startDateTo ||
+        data.startDateFrom <= data.startDateTo,
+    {
+        message: "Start date range is invalid",
+        path: ["startDateTo"],
+    }
 ).refine(
-  (data) =>
-    !data.dueDateFrom ||
-    !data.dueDateTo ||
-    data.dueDateFrom <= data.dueDateTo,
-  {
-    message: "Due date range is invalid",
-    path: ["dueDateTo"],
-  }
+    (data) =>
+        !data.dueDateFrom ||
+        !data.dueDateTo ||
+        data.dueDateFrom <= data.dueDateTo,
+    {
+        message: "Due date range is invalid",
+        path: ["dueDateTo"],
+    }
 );
 
 
@@ -162,6 +162,37 @@ export const assignTaskUserSchema = z.object({
 
 
 
+export const createTaskLabelSchema = z.object({
+    name: z.string().trim().min(1).max(50),
+    color: z.string()
+        .regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color")
+        .nullable()
+        .optional(),
+});
+
+export const updateTaskLabelSchema = z.object({
+    name: z.string().trim().min(1).max(50).optional(),
+    color: z.string()
+        .regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color")
+        .nullable()
+        .optional(),
+}).refine(
+    (data) => Object.keys(data).length > 0,
+    { message: "At least one field must be provided" }
+);
+
+export const taskLabelParamsSchema = z.object({
+    projectId: z.string().uuid(),
+    taskId: z.string().uuid().optional(),
+    labelId: z.string().uuid().optional(),
+});
+
+export const assignTaskLabelSchema = z.object({
+    labelId: z.string().uuid(),
+});
+
+export type CreateTaskLabelInput = z.infer<typeof createTaskLabelSchema>;
+export type UpdateTaskLabelInput = z.infer<typeof updateTaskLabelSchema>;
 export type AssignTaskUserInput = z.infer<typeof assignTaskUserSchema>;
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
