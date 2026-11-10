@@ -281,11 +281,8 @@ export const completeTaskAttachmentUpload = async ( input: TaskAccessInput & { u
 
 // 3. List attachments
 
-export const getTaskAttachments = async (
-  input: TaskAccessInput & {
-    pagination: ListTaskAttachmentsQuery;
-  }
-) => {
+export const getTaskAttachments = async (input: TaskAccessInput & { pagination: ListTaskAttachmentsQuery;}) => {
+
   await getTaskWithAccess(input, false);
 
   const { page, limit } = input.pagination;
@@ -338,11 +335,8 @@ export const getTaskAttachments = async (
 // 4. Generate download URL
 
 
-export const generateTaskAttachmentDownloadUrl = async (
-  input: TaskAccessInput & {
-    attachmentId: string;
-  }
-) => {
+export const generateTaskAttachmentDownloadUrl = async (input: TaskAccessInput & {attachmentId: string;}) => {
+
   await getTaskWithAccess(input, false);
 
   const attachment = await prisma.taskAttachment.findFirst({
@@ -386,11 +380,7 @@ export const generateTaskAttachmentDownloadUrl = async (
 
 // 5. Delete attachment
 
-export const deleteTaskAttachment = async (
-  input: TaskAccessInput & {
-    attachmentId: string;
-  }
-) => {
+export const deleteTaskAttachment = async (input: TaskAccessInput & {  attachmentId: string; } ) => {
   await getTaskWithAccess(input, true);
 
   await prisma.$transaction(async (tx) => {
