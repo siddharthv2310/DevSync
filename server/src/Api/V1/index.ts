@@ -20,6 +20,7 @@ import attachmentRoute from "../../modules/chat/attachment/index.js"
 import notificationRoute from "../../modules/Notification/index.js"
 import userRoute from "../../modules/user/invitations/index.js"
 import taskRouter from "../../modules/task/index.js"
+import taskBoardRoute from "../../modules/task/board/index.js"
 
 
 const router = Router(); 
@@ -46,5 +47,6 @@ router.use("/organizations/:organizationId/projects",projectMemberRoute);
 router.use("/organizations/:organizationId/projects/:projectId/invitations",projectInvitationRoute)
 router.use("/user",userRoute);
 router.use("/projects/:projectId",taskRouter);
+router.use("/projects/:projectId/board",taskBoardRoute);
 
 export default router;

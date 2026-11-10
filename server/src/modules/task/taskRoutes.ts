@@ -14,6 +14,7 @@ import { createSubtaskController, getTaskSubtasksController } from "./taskSubtas
 import { createTaskDependencyController, getTaskDependenciesController, removeTaskDependencyController } from "./taskDependencyController.js";
 import { createTaskCommentController, deleteTaskCommentController, getTaskCommentsController, updateTaskCommentController } from "./taskComments/taskCommentController.js";
 import { completeTaskAttachmentUploadController, deleteTaskAttachmentController, downloadTaskAttachmentController, generateTaskAttachmentUploadUrlController, getTaskAttachmentsController } from "./taskAttachmentController.js";
+import { moveTaskController } from "./taskMovement/taskMovementController.js";
 
 const router = Router({ mergeParams: true });
 
@@ -138,7 +139,7 @@ router.delete("/:taskId/dependencies/:blockingTaskId",
 
 // Task comments
 
-router.post( "/:taskId/comments",
+router.post("/:taskId/comments",
     requireProjectPermission(projectPermission.CREATE_TASK_COMMENT),
     createTaskCommentController
 );
@@ -161,29 +162,38 @@ router.delete("/:taskId/comments/:commentId",
 
 // Task Attachments
 
-router.post( "/:taskId/attachments/upload-url",
+router.post("/:taskId/attachments/upload-url",
     requireProjectPermission(projectPermission.UPDATE_TASK),
     generateTaskAttachmentUploadUrlController
-  );
-  
-  router.post( "/:taskId/attachments/complete",
+);
+
+router.post("/:taskId/attachments/complete",
     requireProjectPermission(projectPermission.UPDATE_TASK),
     completeTaskAttachmentUploadController
-  );
-  
-  router.get("/:taskId/attachments",
+);
+
+router.get("/:taskId/attachments",
     requireProjectPermission(projectPermission.VIEW_TASK),
     getTaskAttachmentsController
-  );
-  
-  router.get( "/:taskId/attachments/:attachmentId/download",
+);
+
+router.get("/:taskId/attachments/:attachmentId/download",
     requireProjectPermission(projectPermission.VIEW_TASK),
     downloadTaskAttachmentController
-  );
-  
-  router.delete("/:taskId/attachments/:attachmentId",
+);
+
+router.delete("/:taskId/attachments/:attachmentId",
     requireProjectPermission(projectPermission.UPDATE_TASK),
     deleteTaskAttachmentController
-  );
+);
+
+// task movement, Move or reorder task
+
+router.patch("/:taskId/move",
+    requireProjectPermission(projectPermission.UPDATE_TASK),
+    moveTaskController
+);
+
+
 
 export default router;
